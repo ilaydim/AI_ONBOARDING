@@ -1,0 +1,18 @@
+llm:
+  provider: claude
+  model: claude-sonnet-4-6
+  max_tokens: 1000
+  temperature: 0.7
+
+content:
+  base_path: ../content
+  chunk_size: 1000
+  chunk_overlap: 200
+  top_k_chunks: 3
+
+gap_detection:
+  question_threshold: 3       # aynı konuda kaç soru = boşluk sinyali
+  time_multiplier: 2.0        # tahmini sürenin kaç katı geçince boşluk sinyali
+
+auth:
+  token_expire_minutes: 480
