@@ -4,7 +4,7 @@
 from fastapi import APIRouter, Depends
 from app.models.user import UserProfile
 from app.core.auth import get_current_user, require_admin
-from app.content.progress_store import get_completion_stats, get_gaps
+from app.content.progress_store import get_completion_stats, get_gaps, get_proficiency_summary
 from app.llm.factory import get_llm_adapter
 from app.llm.prompt_builder import SESSION_SUMMARY_PROMPT_TR
 from app.api.chat import _sessions
@@ -61,7 +61,8 @@ def admin_user_progress(
     user_id: str,
     _admin: UserProfile = Depends(require_admin),
 ):
-    """Yönetici: belirli bir çalışanın ilerleme raporu — SRS §FR-4.9"""
+    """Yönetici: belirli bir çalışanın ilerleme raporu — SRS §FR-4.9, FR-4.10, FR-4.11"""
     stats = get_completion_stats(user_id)
     gaps = get_gaps(user_id)
-    return {"user_id": user_id, "stats": stats, "gaps": gaps}
+    proficiency = get_proficiency_summary(user_id)
+    return {"user_id": user_id, "stats": stats, "gaps": gaps, "proficiency_tests": proficiency}

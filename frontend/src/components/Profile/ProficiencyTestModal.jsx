@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { generateTest, submitTest } from "../../services/api";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function ProficiencyTestModal({ noteKey, onClose, onPassed }) {
   const [questions, setQuestions] = useState([]);
@@ -7,6 +8,7 @@ export default function ProficiencyTestModal({ noteKey, onClose, onPassed }) {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     generateTest(noteKey, 4)
@@ -23,7 +25,7 @@ export default function ProficiencyTestModal({ noteKey, onClose, onPassed }) {
       setResult(res);
       if (res.passed) onPassed?.();
     } catch {
-      setResult({ passed: false, message: "Test gönderilemedi." });
+      setResult({ passed: false, message: t("proficiency.submitError") });
     } finally {
       setSubmitting(false);
     }
@@ -32,9 +34,9 @@ export default function ProficiencyTestModal({ noteKey, onClose, onPassed }) {
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
-        <h2 style={styles.title}>Yeterlilik Testi: {noteKey}</h2>
-        {loading && <p>Sorular hazırlanıyor...</p>}
-        {!loading && questions.length === 0 && <p>Test üretilemedi.</p>}
+        <h2 style={styles.title}>{t("proficiency.title", { key: noteKey })}</h2>
+        {loading && <p>{t("proficiency.loading")}</p>}
+        {!loading && questions.length === 0 && <p>{t("proficiency.noQuestions")}</p>}
         {!result && questions.map((q, i) => (
           <div key={i} style={styles.question}>
             <p style={styles.qText}>{i + 1}. {q.question}</p>
@@ -54,7 +56,7 @@ export default function ProficiencyTestModal({ noteKey, onClose, onPassed }) {
         {result && (
           <div style={{ ...styles.result, background: result.passed ? "#f0fdf4" : "#fef2f2" }}>
             <p style={{ fontWeight: 700, color: result.passed ? "#10b981" : "#dc2626" }}>
-              {result.passed ? "✅ Geçildi!" : "❌ Başarısız"}
+              {result.passed ? t("proficiency.passed") : t("proficiency.failed")}
             </p>
             <p>{result.message}</p>
           </div>
@@ -62,10 +64,10 @@ export default function ProficiencyTestModal({ noteKey, onClose, onPassed }) {
         <div style={styles.actions}>
           {!result && (
             <button style={styles.submitBtn} onClick={handleSubmit} disabled={submitting || loading}>
-              {submitting ? "Gönderiliyor..." : "Testi Gönder"}
+              {submitting ? t("proficiency.submitting") : t("proficiency.submit")}
             </button>
           )}
-          <button style={styles.closeBtn} onClick={onClose}>Kapat</button>
+          <button style={styles.closeBtn} onClick={onClose}>{t("proficiency.close")}</button>
         </div>
       </div>
     </div>

@@ -15,5 +15,7 @@ def get_llm_adapter() -> LLMAdapter:
     if provider == "claude":
         from app.llm.claude_adapter import ClaudeAdapter
         return ClaudeAdapter()
-    # Faz 2: elif provider == "azure_openai": ...
+    if provider == "groq":
+        from app.llm.groq_adapter import GroqAdapter
+        return GroqAdapter()
     raise ValueError(f"Unknown LLM provider: {provider}")

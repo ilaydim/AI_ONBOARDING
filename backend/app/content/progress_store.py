@@ -81,6 +81,30 @@ def get_gaps(user_id: str) -> list[GapRecord]:
     return [GapRecord(**g) for g in data.get("gaps", [])]
 
 
+# ─── Proficiency test takibi — SRS §FR-4.11 ─────────────────────────────────
+
+def record_proficiency_attempt(user_id: str, note_key: str, passed: bool, score: float):
+    data = _load(user_id)
+    tests = data.setdefault("proficiency_tests", {})
+    entry = tests.setdefault(note_key, {"attempts": 0, "failed_attempts": 0, "passed": False})
+    entry["attempts"] += 1
+    if passed:
+        entry["passed"] = True
+    else:
+        entry["failed_attempts"] += 1
+    entry["last_score"] = round(score, 1)
+    _save(user_id, data)
+
+
+def get_proficiency_summary(user_id: str) -> list:
+    data = _load(user_id)
+    tests = data.get("proficiency_tests", {})
+    return [
+        {"note_key": k, **v}
+        for k, v in tests.items()
+    ]
+
+
 # ─── Summary ─────────────────────────────────────────────────────────────────
 
 def get_completion_stats(user_id: str) -> dict:

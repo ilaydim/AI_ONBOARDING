@@ -1,23 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { getMyProgress, getSessionSummary } from "../../services/api";
+import { getMyProgress } from "../../services/api";
+import { useLanguage } from "../../contexts/LanguageContext";
 
-export default function ProgressBar() {
+export default function ProgressBar({ onShowSummary }) {
   const [stats, setStats] = useState(null);
-  const [summary, setSummary] = useState("");
-  const [loadingSummary, setLoadingSummary] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     getMyProgress().then(setStats).catch(() => {});
   }, []);
-
-  const handleSummary = async () => {
-    setLoadingSummary(true);
-    try {
-      const data = await getSessionSummary();
-      setSummary(data.summary);
-    } catch { setSummary("Özet üretilemedi."); }
-    finally { setLoadingSummary(false); }
-  };
 
   if (!stats) return null;
   const pct = stats.completion_percentage || 0;
@@ -25,21 +16,22 @@ export default function ProgressBar() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <span style={styles.label}>Genel İlerleme</span>
+        <span style={styles.label}>{t("progress.title")}</span>
         <span style={styles.pct}>{pct}%</span>
       </div>
       <div style={styles.barBg}>
         <div style={{ ...styles.barFill, width: `${pct}%` }} />
       </div>
       <div style={styles.counts}>
-        <span>✅ {stats.completed} tamamlandı</span>
-        <span>⏭ {stats.skipped} atlandı</span>
-        <span>⏳ {stats.pending} bekliyor</span>
+        <span>✅ {stats.completed} {t("progress.completed")}</span>
+        <span>⏭ {stats.skipped} {t("progress.skipped")}</span>
+        <span>⏳ {stats.pending} {t("progress.pending")}</span>
       </div>
-      <button style={styles.summaryBtn} onClick={handleSummary} disabled={loadingSummary}>
-        {loadingSummary ? "Özet hazırlanıyor..." : "Oturum Özeti Al"}
-      </button>
-      {summary && <div style={styles.summary}>{summary}</div>}
+      {onShowSummary && (
+        <button style={styles.summaryBtn} onClick={onShowSummary}>
+          {t("progress.summaryBtn")}
+        </button>
+      )}
     </div>
   );
 }
@@ -52,6 +44,5 @@ const styles = {
   barBg: { height: 8, background: "#e5e7eb", borderRadius: 4, marginBottom: 10 },
   barFill: { height: "100%", background: "#4f46e5", borderRadius: 4, transition: "width 0.5s" },
   counts: { display: "flex", gap: 16, fontSize: 12, color: "#6b7280", marginBottom: 12 },
-  summaryBtn: { padding: "8px 14px", background: "#10b981", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 },
-  summary: { marginTop: 12, padding: 12, background: "#f0fdf4", borderRadius: 8, fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap" },
+  summaryBtn: { width: "100%", padding: "8px 14px", background: "#10b981", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 },
 };

@@ -29,6 +29,8 @@ export const login = (username, password) =>
 export const createUser = (userData) =>
   api.post("/auth/users", userData).then((r) => r.data);
 
+export const getUsers = () => api.get("/auth/users").then((r) => r.data);
+
 export const getMe = () => api.get("/auth/me").then((r) => r.data);
 
 // ─── Chat ────────────────────────────────────────────────────────────────────

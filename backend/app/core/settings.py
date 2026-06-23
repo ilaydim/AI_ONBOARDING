@@ -5,6 +5,7 @@ import yaml, os
 
 class Settings(BaseSettings):
     anthropic_api_key: str = ""
+    groq_api_key: str = ""
     secret_key: str = "dev-secret-change-in-production"
     token_expire_minutes: int = 480
 

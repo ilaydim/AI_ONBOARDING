@@ -13,6 +13,7 @@ from app.content.progress_store import (
 )
 from app.content.loader import load_area_content
 from app.llm.factory import get_llm_adapter
+from app.core.logger import log_task_event
 from app.llm.prompt_builder import EVALUATION_PROMPT_TR
 import json, re
 
@@ -74,9 +75,8 @@ def complete_task(
     all_tasks = parse_tasks(current_user.area, current_user.language)
     task = next((t for t in all_tasks if t.id == req.task_id), None)
     if not task:
-        raise HTTPException(status_code=404, detail="Görev bulunamadı")
+        raise HTTPException(status_code=404, detail="Task not found")
 
-    # LLM ile değerlendirme
     area_content = load_area_content(current_user.area, current_user.language)
     eval_prompt = EVALUATION_PROMPT_TR.format(
         task_title=task.title,
@@ -87,7 +87,7 @@ def complete_task(
     adapter = get_llm_adapter()
     try:
         raw = adapter.send_message(
-            system_prompt="Sen bir teknik değerlendiricisin. Yalnızca JSON formatında yanıt ver.",
+            system_prompt="You are a technical evaluator. Respond only in JSON format.",
             conversation_history=[],
             user_message=eval_prompt,
         )
@@ -98,13 +98,14 @@ def complete_task(
         else:
             result_data = {"passed": False, "feedback": raw}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"LLM değerlendirme hatası: {str(e)}")
+        raise HTTPException(status_code=503, detail=f"LLM evaluation error: {str(e)}")
 
     passed = result_data.get("passed", False)
     feedback = result_data.get("feedback", "")
 
     if passed:
         mark_task_completed(current_user.id, req.task_id)
+    log_task_event(current_user.id, req.task_id, "task_complete", passed=passed)
 
     # Sıradaki görevi bul
     level_tasks = _filter_tasks_for_level(all_tasks, current_user.experience_level)
@@ -131,14 +132,15 @@ def skip_task(task_id: str, current_user: UserProfile = Depends(get_current_user
     all_tasks = parse_tasks(current_user.area, current_user.language)
     task = next((t for t in all_tasks if t.id == task_id), None)
     if not task:
-        raise HTTPException(status_code=404, detail="Görev bulunamadı")
+        raise HTTPException(status_code=404, detail="Task not found")
     if not task.skippable:
         raise HTTPException(
             status_code=400,
-            detail=f"Bu görev atlanamaz — ilerleyen konular için zorunludur. (SRS §FR-3.14)"
+            detail=f"This task cannot be skipped — it is required for subsequent topics."
         )
     mark_task_skipped(current_user.id, task_id)
-    return {"message": f"Görev '{task.title}' atlandı olarak işaretlendi"}
+    log_task_event(current_user.id, task_id, "task_skip")
+    return {"message": f"Task '{task.title}' marked as skipped"}
 
 
 @router.get("/stats")

@@ -1,6 +1,6 @@
 llm:
-  provider: claude
-  model: claude-sonnet-4-6
+  provider: groq
+  model: llama-3.3-70b-versatile
   max_tokens: 1000
   temperature: 0.7
 
