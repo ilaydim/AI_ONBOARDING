@@ -9,12 +9,12 @@ from app.core.auth import get_current_user
 from app.content.task_parser import parse_tasks
 from app.content.progress_store import (
     get_task_progress, save_task_progress, mark_task_completed,
-    mark_task_skipped, get_completion_stats,
+    mark_task_skipped, resume_task, get_completion_stats,
 )
 from app.content.loader import load_area_content
 from app.llm.factory import get_llm_adapter
 from app.core.logger import log_task_event
-from app.llm.prompt_builder import EVALUATION_PROMPT_TR
+from app.llm.prompt_builder import get_evaluation_prompt
 import json, re
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -78,7 +78,7 @@ def complete_task(
         raise HTTPException(status_code=404, detail="Task not found")
 
     area_content = load_area_content(current_user.area, current_user.language)
-    eval_prompt = EVALUATION_PROMPT_TR.format(
+    eval_prompt = get_evaluation_prompt(current_user.language).format(
         task_title=task.title,
         criteria=task.completion_criteria,
         user_output=req.user_output,
@@ -104,7 +104,7 @@ def complete_task(
     feedback = result_data.get("feedback", "")
 
     if passed:
-        mark_task_completed(current_user.id, req.task_id)
+        mark_task_completed(current_user.id, req.task_id, req.elapsed_minutes)
     log_task_event(current_user.id, req.task_id, "task_complete", passed=passed)
 
     # Sıradaki görevi bul
@@ -127,8 +127,12 @@ def complete_task(
     )
 
 
+class SkipRequest(BaseModel):
+    elapsed_minutes: float = 0.0
+
+
 @router.post("/{task_id}/skip")
-def skip_task(task_id: str, current_user: UserProfile = Depends(get_current_user)):
+def skip_task(task_id: str, req: SkipRequest = SkipRequest(), current_user: UserProfile = Depends(get_current_user)):
     all_tasks = parse_tasks(current_user.area, current_user.language)
     task = next((t for t in all_tasks if t.id == task_id), None)
     if not task:
@@ -136,11 +140,26 @@ def skip_task(task_id: str, current_user: UserProfile = Depends(get_current_user
     if not task.skippable:
         raise HTTPException(
             status_code=400,
-            detail=f"This task cannot be skipped — it is required for subsequent topics."
+            detail="This task cannot be skipped — it is required for subsequent topics."
         )
-    mark_task_skipped(current_user.id, task_id)
+    mark_task_skipped(current_user.id, task_id, req.elapsed_minutes)
     log_task_event(current_user.id, task_id, "task_skip")
     return {"message": f"Task '{task.title}' marked as skipped"}
+
+
+@router.post("/{task_id}/resume")
+def resume_skipped_task(task_id: str, current_user: UserProfile = Depends(get_current_user)):
+    all_tasks = parse_tasks(current_user.area, current_user.language)
+    task = next((t for t in all_tasks if t.id == task_id), None)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    progress = get_task_progress(current_user.id)
+    tp = progress.get(task_id)
+    if not tp or tp.status != "skipped":
+        raise HTTPException(status_code=400, detail="Task is not skipped")
+    resume_task(current_user.id, task_id)
+    log_task_event(current_user.id, task_id, "task_resume")
+    return {"message": f"Task '{task.title}' resumed"}
 
 
 @router.get("/stats")

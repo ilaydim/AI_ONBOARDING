@@ -41,18 +41,27 @@ def save_task_progress(user_id: str, task_id: str, progress: TaskProgress):
     _save(user_id, data)
 
 
-def mark_task_completed(user_id: str, task_id: str):
+def mark_task_completed(user_id: str, task_id: str, elapsed_minutes: float = 0.0):
     data = _load(user_id)
-    data.setdefault("tasks", {}).setdefault(task_id, {})
-    data["tasks"][task_id]["status"] = TaskStatus.completed
+    entry = data.setdefault("tasks", {}).setdefault(task_id, {})
+    entry["status"] = TaskStatus.completed
+    entry["elapsed_minutes"] = round(entry.get("elapsed_minutes", 0) + elapsed_minutes, 1)
     _save(user_id, data)
 
 
-def mark_task_skipped(user_id: str, task_id: str):
+def mark_task_skipped(user_id: str, task_id: str, elapsed_minutes: float = 0.0):
     data = _load(user_id)
-    data.setdefault("tasks", {}).setdefault(task_id, {})
-    data["tasks"][task_id]["status"] = TaskStatus.skipped
+    entry = data.setdefault("tasks", {}).setdefault(task_id, {})
+    entry["status"] = TaskStatus.skipped
+    entry["elapsed_minutes"] = round(entry.get("elapsed_minutes", 0) + elapsed_minutes, 1)
     _save(user_id, data)
+
+
+def resume_task(user_id: str, task_id: str):
+    data = _load(user_id)
+    if task_id in data.get("tasks", {}):
+        data["tasks"][task_id]["status"] = TaskStatus.pending
+        _save(user_id, data)
 
 
 def increment_question_count(user_id: str, task_id: str):

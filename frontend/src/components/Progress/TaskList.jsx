@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getLearningPath, skipTask } from "../../services/api";
+import { getLearningPath, skipTask, resumeTask } from "../../services/api";
 import { useLanguage } from "../../contexts/LanguageContext";
 
 const STATUS_COLOR = {
@@ -38,6 +38,16 @@ export default function TaskList({ onSelectTask, selectedTaskId }) {
     }
   };
 
+  const handleResume = async (taskId, e) => {
+    e.stopPropagation();
+    try {
+      await resumeTask(taskId);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.detail || t("tasks.resumeError"));
+    }
+  };
+
   const handleSelect = (task, locked) => {
     if (locked) { alert(t("tasks.lockedAlert")); return; }
     onSelectTask?.(task);
@@ -50,9 +60,19 @@ export default function TaskList({ onSelectTask, selectedTaskId }) {
   const completed = path.filter(({ status }) => status === "completed").length;
   const skipped = path.filter(({ status }) => status === "skipped").length;
   const pending = path.filter(({ status }) => status === "pending").length;
+  const allDone = path.length > 0 && pending === 0;
 
   return (
     <div style={styles.container}>
+      {allDone && (
+        <div style={styles.completionBanner}>
+          <span style={{ fontSize: 28 }}>🎉</span>
+          <div>
+            <p style={styles.completionTitle}>{t("tasks.allDoneTitle")}</p>
+            <p style={styles.completionSub}>{t("tasks.allDoneSub")}</p>
+          </div>
+        </div>
+      )}
       <h3 style={styles.title}>{t("tasks.title")}</h3>
       <div style={styles.statsRow}>
         <span>✅ {completed} {t("tasks.status.completed").replace("✅ ", "")}</span>
@@ -86,6 +106,11 @@ export default function TaskList({ onSelectTask, selectedTaskId }) {
                       {t("tasks.skip")}
                     </button>
                   )}
+                  {status === "skipped" && (
+                    <button style={styles.resumeBtn} onClick={(e) => handleResume(task.id, e)}>
+                      {t("tasks.resume")}
+                    </button>
+                  )}
                 </p>
               </div>
             </div>
@@ -106,4 +131,8 @@ const styles = {
   taskTitle: { fontWeight: 600, fontSize: 14, marginBottom: 2 },
   meta: { fontSize: 12, color: "#6b7280" },
   skipBtn: { marginLeft: 10, padding: "2px 8px", fontSize: 11, background: "#f3f4f6", border: "1px solid #ddd", borderRadius: 4, cursor: "pointer" },
+  resumeBtn: { marginLeft: 10, padding: "2px 8px", fontSize: 11, background: "#dbeafe", border: "1px solid #93c5fd", borderRadius: 4, cursor: "pointer", color: "#1d4ed8", fontWeight: 600 },
+  completionBanner: { display: "flex", gap: 12, alignItems: "center", background: "linear-gradient(135deg,#d1fae5,#a7f3d0)", border: "2px solid #10b981", borderRadius: 12, padding: "16px 20px", marginBottom: 16 },
+  completionTitle: { fontWeight: 800, fontSize: 16, color: "#065f46", margin: 0 },
+  completionSub: { fontSize: 12, color: "#047857", margin: "4px 0 0" },
 };

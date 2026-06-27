@@ -7,8 +7,8 @@ from app.models.user import UserProfile
 from app.core.auth import get_current_user
 from app.content.loader import load_area_content
 from app.llm.factory import get_llm_adapter
-from app.llm.prompt_builder import QUIZ_PROMPT_TR
-from app.content.progress_store import record_proficiency_attempt
+from app.llm.prompt_builder import get_quiz_prompt
+from app.content.progress_store import record_proficiency_attempt, record_gap
 from app.core.logger import log_task_event
 import json, re
 
@@ -32,7 +32,7 @@ def generate_test(
     current_user: UserProfile = Depends(get_current_user),
 ):
     area_content = load_area_content(current_user.area, current_user.language)
-    prompt = QUIZ_PROMPT_TR.format(
+    prompt = get_quiz_prompt(current_user.language).format(
         count=req.question_count,
         topic=req.note_key,
         level=current_user.experience_level,
@@ -84,6 +84,8 @@ def submit_test(
             _save_users(users)
 
     record_proficiency_attempt(current_user.id, req.note_key, passed, score * 100)
+    if not passed:
+        record_gap(current_user.id, req.note_key, "proficiency_failed")
     log_task_event(current_user.id, req.note_key, "proficiency_submit", passed=passed)
 
     return {

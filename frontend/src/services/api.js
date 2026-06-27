@@ -46,11 +46,14 @@ export const clearHistory = () => api.delete("/chat/history");
 export const getLearningPath = () =>
   api.get("/tasks/learning-path").then((r) => r.data);
 
-export const completeTask = (taskId, userOutput) =>
-  api.post("/tasks/complete", { task_id: taskId, user_output: userOutput }).then((r) => r.data);
+export const completeTask = (taskId, userOutput, elapsedMinutes = 0) =>
+  api.post("/tasks/complete", { task_id: taskId, user_output: userOutput, elapsed_minutes: elapsedMinutes }).then((r) => r.data);
 
-export const skipTask = (taskId) =>
-  api.post(`/tasks/${taskId}/skip`).then((r) => r.data);
+export const skipTask = (taskId, elapsedMinutes = 0) =>
+  api.post(`/tasks/${taskId}/skip`, { elapsed_minutes: elapsedMinutes }).then((r) => r.data);
+
+export const resumeTask = (taskId) =>
+  api.post(`/tasks/${taskId}/resume`).then((r) => r.data);
 
 export const getTaskStats = () =>
   api.get("/tasks/stats").then((r) => r.data);

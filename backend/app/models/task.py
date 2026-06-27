@@ -38,7 +38,8 @@ class LearningPath(BaseModel):
 
 class TaskCompletionRequest(BaseModel):
     task_id: str
-    user_output: str                           # çalışanın yazdığı özet/çıktı
+    user_output: str
+    elapsed_minutes: float = 0.0
 
 
 class TaskCompletionResult(BaseModel):

@@ -18,6 +18,7 @@ export default function ChatScreen({ user, currentTaskId, currentTask, onTaskCom
   const [completing, setCompleting] = useState(false);
   const [pendingHelp, setPendingHelp] = useState(null);
   const bottomRef = useRef(null);
+  const taskStartRef = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -26,6 +27,7 @@ export default function ChatScreen({ user, currentTaskId, currentTask, onTaskCom
   useEffect(() => {
     setShowCompleteForm(false);
     setCompletionOutput("");
+    taskStartRef.current = currentTaskId ? Date.now() : null;
   }, [currentTaskId]);
 
   const handleSend = async () => {
@@ -52,12 +54,15 @@ export default function ChatScreen({ user, currentTaskId, currentTask, onTaskCom
     if (!completionOutput.trim() || completing) return;
     setCompleting(true);
     setShowCompleteForm(false);
+    const elapsedMinutes = taskStartRef.current
+      ? Math.round((Date.now() - taskStartRef.current) / 60000 * 10) / 10
+      : 0;
     setMessages((prev) => [
       ...prev,
       { role: "user", content: t("chat.taskOutput", { output: completionOutput }) },
     ]);
     try {
-      const result = await completeTask(currentTaskId, completionOutput);
+      const result = await completeTask(currentTaskId, completionOutput, elapsedMinutes);
       if (result.passed) {
         const key = result.next_task_id ? "chat.passed" : "chat.passedAll";
         setMessages((prev) => [

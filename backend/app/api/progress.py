@@ -6,7 +6,7 @@ from app.models.user import UserProfile
 from app.core.auth import get_current_user, require_admin
 from app.content.progress_store import get_completion_stats, get_gaps, get_proficiency_summary
 from app.llm.factory import get_llm_adapter
-from app.llm.prompt_builder import SESSION_SUMMARY_PROMPT_TR
+from app.llm.prompt_builder import get_session_summary_prompt
 from app.api.chat import _sessions
 
 router = APIRouter(prefix="/progress", tags=["progress"])
@@ -26,15 +26,19 @@ def my_gaps(current_user: UserProfile = Depends(get_current_user)):
 def generate_session_summary(current_user: UserProfile = Depends(get_current_user)):
     """Oturum sonunda LLM ile özet üret — SRS §FR-4.4"""
     history = _sessions.get(current_user.id, [])
+    lang = current_user.language
     if not history:
-        return {"summary": "Bu oturumda henüz konuşma yapılmamış."}
+        msg = "Bu oturumda henüz konuşma yapılmamış." if lang == "tr" else "No conversation in this session yet."
+        return {"summary": msg}
 
+    user_label = "Çalışan" if lang == "tr" else "Employee"
+    ai_label = "Asistan" if lang == "tr" else "Assistant"
     conversation_text = "\n".join(
-        f"{'Çalışan' if m['role'] == 'user' else 'Asistan'}: {m['content']}"
-        for m in history[-20:]  # Son 20 mesaj
+        f"{user_label if m['role'] == 'user' else ai_label}: {m['content']}"
+        for m in history[-20:]
     )
 
-    prompt = SESSION_SUMMARY_PROMPT_TR.format(
+    prompt = get_session_summary_prompt(lang).format(
         first_name=current_user.first_name,
         last_name=current_user.last_name,
         area=current_user.area,
@@ -42,9 +46,10 @@ def generate_session_summary(current_user: UserProfile = Depends(get_current_use
     )
 
     adapter = get_llm_adapter()
+    sys = "Sen bir eğitim koordinatörüsün." if lang == "tr" else "You are a training coordinator."
     try:
         summary = adapter.send_message(
-            system_prompt="Sen bir eğitim koordinatörüsün.",
+            system_prompt=sys,
             conversation_history=[],
             user_message=prompt,
         )

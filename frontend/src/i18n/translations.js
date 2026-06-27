@@ -41,6 +41,10 @@ const translations = {
       skipError: "Could not skip task.",
       lockedAlert: "You need to complete the previous task before proceeding.",
       skip: "Skip",
+      resume: "Resume",
+      resumeError: "Could not resume task.",
+      allDoneTitle: "Onboarding Complete!",
+      allDoneSub: "You've finished all tasks. Great work! You can still review skipped tasks below.",
       status: {
         pending: "Pending",
         in_progress: "In Progress",
@@ -180,6 +184,10 @@ const translations = {
       skipError: "Görev atlanamadı.",
       lockedAlert: "Bu göreve geçmek için önceki görevi tamamlaman gerekiyor.",
       skip: "Atla",
+      resume: "Devam Et",
+      resumeError: "Görev devam ettirilemedi.",
+      allDoneTitle: "Onboarding Tamamlandı!",
+      allDoneSub: "Tüm görevleri bitirdin. Harika iş! Atlanan görevleri aşağıdan incelemeye devam edebilirsin.",
       status: {
         pending: "Bekliyor",
         in_progress: "Devam ediyor",

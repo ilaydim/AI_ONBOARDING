@@ -64,17 +64,49 @@ Yanıtını SADECE JSON formatında ver, başka açıklama ekleme:
   ]
 }}"""
 
+QUIZ_PROMPT_EN = """You are a technical evaluator. Generate a short proficiency test with {count} questions on the following topic.
+
+Topic: {topic}
+Level: {level}
+Relevant Content:
+{context}
+
+Provide 4 options for each question and indicate the correct answer.
+Reply ONLY in JSON format, no other explanation:
+{{
+  "questions": [
+    {{
+      "question": "...",
+      "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+      "correct_index": 0
+    }}
+  ]
+}}"""
+
 EVALUATION_PROMPT_TR = """Bir çalışanın görev çıktısını değerlendiriyorsun.
 
 Görev: {task_title}
 Tamamlanma Kriteri: {criteria}
 Çalışanın Çıktısı: {user_output}
 
-Bu çıktı tamamlanma kriterini karşılıyor mu? 
+Bu çıktı tamamlanma kriterini karşılıyor mu?
 Yanıtını SADECE JSON formatında ver:
 {{
   "passed": true/false,
   "feedback": "kısa ve yapıcı geri bildirim"
+}}"""
+
+EVALUATION_PROMPT_EN = """You are evaluating an employee's task output.
+
+Task: {task_title}
+Completion Criteria: {criteria}
+Employee Output: {user_output}
+
+Does this output meet the completion criteria?
+Reply ONLY in JSON format:
+{{
+  "passed": true/false,
+  "feedback": "short and constructive feedback in English"
 }}"""
 
 SESSION_SUMMARY_PROMPT_TR = """Bu oturumda çalışanla olan konuşmayı özetle.
@@ -88,6 +120,17 @@ Konuşma geçmişi:
 Kısa, motive edici bir özet yaz. Neler öğrenildi, hangi konular eksik kaldı, bir sonraki adım ne olmalı?
 2-3 paragrafla sınırla."""
 
+SESSION_SUMMARY_PROMPT_EN = """Summarize the session conversation with the employee.
+
+Employee: {first_name} {last_name}
+Area: {area}
+
+Conversation history:
+{conversation}
+
+Write a short, motivating summary in English. What was learned, which topics remain gaps, what should the next step be?
+Limit to 2-3 paragraphs."""
+
 
 def build_system_prompt(profile: dict, context: str, language: str = "tr") -> str:
     template = SYSTEM_PROMPT_TR if language == "tr" else SYSTEM_PROMPT_EN
@@ -98,3 +141,15 @@ def build_system_prompt(profile: dict, context: str, language: str = "tr") -> st
         experience_level=profile["experience_level"],
         context=context,
     )
+
+
+def get_quiz_prompt(language: str = "tr") -> str:
+    return QUIZ_PROMPT_TR if language == "tr" else QUIZ_PROMPT_EN
+
+
+def get_evaluation_prompt(language: str = "tr") -> str:
+    return EVALUATION_PROMPT_TR if language == "tr" else EVALUATION_PROMPT_EN
+
+
+def get_session_summary_prompt(language: str = "tr") -> str:
+    return SESSION_SUMMARY_PROMPT_TR if language == "tr" else SESSION_SUMMARY_PROMPT_EN
