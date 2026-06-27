@@ -31,6 +31,9 @@ export const createUser = (userData) =>
 
 export const getUsers = () => api.get("/auth/users").then((r) => r.data);
 
+export const deleteUser = (userId) =>
+  api.delete(`/auth/users/${userId}`).then((r) => r.data);
+
 export const getMe = () => api.get("/auth/me").then((r) => r.data);
 
 // ─── Chat ────────────────────────────────────────────────────────────────────

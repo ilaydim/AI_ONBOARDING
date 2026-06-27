@@ -6,6 +6,7 @@ from app.models.user import UserProfile
 from app.core.auth import get_current_user, require_admin, _load_users
 from app.content.progress_store import get_completion_stats, get_gaps, get_proficiency_summary, get_task_progress
 from app.content.task_parser import parse_tasks
+from app.models.task import TaskStatus
 from app.llm.factory import get_llm_adapter
 from app.llm.prompt_builder import get_session_summary_prompt
 from app.api.chat import _sessions
@@ -32,17 +33,30 @@ def generate_session_summary(current_user: UserProfile = Depends(get_current_use
         msg = "Bu oturumda henüz konuşma yapılmamış." if lang == "tr" else "No conversation in this session yet."
         return {"summary": msg}
 
+    # Gerçek ilerleme istatistiklerini al
+    all_tasks = parse_tasks(current_user.area, current_user.language)
+    level_tasks = [t for t in all_tasks if current_user.experience_level in t.levels]
+    progress_map = get_task_progress(current_user.id)
+    completed = sum(1 for t in level_tasks if progress_map.get(t.id) and progress_map[t.id].status == TaskStatus.completed)
+    skipped = sum(1 for t in level_tasks if progress_map.get(t.id) and progress_map[t.id].status == TaskStatus.skipped)
+    total = len(level_tasks)
+    pending = total - completed - skipped
+
     user_label = "Çalışan" if lang == "tr" else "Employee"
     ai_label = "Asistan" if lang == "tr" else "Assistant"
     conversation_text = "\n".join(
         f"{user_label if m['role'] == 'user' else ai_label}: {m['content']}"
-        for m in history[-20:]
+        for m in history[-30:]
     )
 
     prompt = get_session_summary_prompt(lang).format(
         first_name=current_user.first_name,
         last_name=current_user.last_name,
         area=current_user.area,
+        completed=completed,
+        skipped=skipped,
+        pending=pending,
+        total=total,
         conversation=conversation_text,
     )
 

@@ -139,6 +139,9 @@ const translations = {
       noEmployees: "No employees registered yet.",
       loadError: "Failed to load report.",
       loading: "Loading...",
+      deleteUser: "Delete",
+      deleteConfirm: "Are you sure you want to delete {name}? This will also erase their progress data.",
+      deleteError: "Could not delete user.",
     },
   },
 
@@ -282,6 +285,9 @@ const translations = {
       noEmployees: "Henüz kayıtlı çalışan yok.",
       loadError: "Rapor yüklenemedi.",
       loading: "Yükleniyor...",
+      deleteUser: "Sil",
+      deleteConfirm: "{name} kullanıcısını silmek istediğine emin misin? İlerleme verisi de silinecek.",
+      deleteError: "Kullanıcı silinemedi.",
     },
   },
 };

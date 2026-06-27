@@ -115,23 +115,29 @@ SESSION_SUMMARY_PROMPT_TR = """Bu oturumda çalışanla olan konuşmayı özetle
 
 Çalışan: {first_name} {last_name}
 Alan: {area}
+İlerleme: {completed} görev tamamlandı, {skipped} atlandı, {pending} bekliyor (toplam {total})
 
 Konuşma geçmişi:
 {conversation}
 
-Kısa, motive edici bir özet yaz. Neler öğrenildi, hangi konular eksik kaldı, bir sonraki adım ne olmalı?
-2-3 paragrafla sınırla."""
+Kısa, motive edici bir özet yaz (2-3 paragraf):
+1. Bu oturumda neler ele alındı veya öğrenildi?
+2. Hangi konular daha fazla pratik gerektiriyor?
+3. Bir sonraki adım ne olmalı?"""
 
 SESSION_SUMMARY_PROMPT_EN = """Summarize the session conversation with the employee.
 
 Employee: {first_name} {last_name}
 Area: {area}
+Progress: {completed} tasks completed, {skipped} skipped, {pending} pending (total {total})
 
 Conversation history:
 {conversation}
 
-Write a short, motivating summary in English. What was learned, which topics remain gaps, what should the next step be?
-Limit to 2-3 paragraphs."""
+Write a short, motivating summary (2-3 paragraphs):
+1. What was covered or learned in this session?
+2. Which topics need more practice?
+3. What should the next step be?"""
 
 
 def build_system_prompt(profile: dict, context: str, language: str = "tr") -> str:

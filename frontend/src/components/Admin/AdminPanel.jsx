@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { createUser, getUsers, getAdminProgress } from "../../services/api";
+import { createUser, getUsers, getAdminProgress, deleteUser } from "../../services/api";
 import { useLanguage } from "../../contexts/LanguageContext";
 
 const AREAS = ["backend", "frontend", "devops", "product", "qa"];
@@ -202,13 +202,30 @@ function EmployeeReports() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
-  useEffect(() => {
+  const loadUsers = () => {
+    setLoading(true);
     getUsers()
       .then((all) => setUsers(all.filter((u) => u.role !== "admin")))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadUsers(); }, []);
+
+  const handleDelete = async (u) => {
+    if (!window.confirm(t("admin.deleteConfirm", { name: `${u.first_name} ${u.last_name}` }))) return;
+    setDeleting(u.id);
+    try {
+      await deleteUser(u.id);
+      loadUsers();
+    } catch (e) {
+      alert(e.response?.data?.detail || t("admin.deleteError"));
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   if (loading) return <p style={{ padding: 16, color: "#666" }}>{t("admin.loading")}</p>;
   if (selected) return <EmployeeDetail employee={selected} onBack={() => setSelected(null)} />;
@@ -235,9 +252,18 @@ function EmployeeReports() {
                 <td style={s.td}><span style={s.areaBadge}>{u.area}</span></td>
                 <td style={s.td}><span style={s.levelBadge}>{u.experience_level}</span></td>
                 <td style={s.td}>
-                  <button style={s.detailBtn} onClick={() => setSelected(u)}>
-                    {t("admin.viewReport")}
-                  </button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={s.detailBtn} onClick={() => setSelected(u)}>
+                      {t("admin.viewReport")}
+                    </button>
+                    <button
+                      style={s.deleteBtn}
+                      onClick={() => handleDelete(u)}
+                      disabled={deleting === u.id}
+                    >
+                      {deleting === u.id ? "…" : t("admin.deleteUser")}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -302,6 +328,7 @@ const s = {
   areaBadge: { background: "#ede9fe", color: "#5b21b6", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 600 },
   levelBadge: { background: "#e0f2fe", color: "#0369a1", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 600 },
   detailBtn: { padding: "6px 12px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600 },
+  deleteBtn: { padding: "6px 12px", background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600 },
   noteRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 },
   verifiedTag: { color: "#10b981", fontWeight: 700, fontSize: 12 },
   pendingTag: { color: "#f59e0b", fontWeight: 700, fontSize: 12 },

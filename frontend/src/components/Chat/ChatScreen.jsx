@@ -17,6 +17,7 @@ export default function ChatScreen({ user, currentTaskId, currentTask, onTaskCom
   const [completionOutput, setCompletionOutput] = useState("");
   const [completing, setCompleting] = useState(false);
   const [pendingHelp, setPendingHelp] = useState(null);
+  const [failCount, setFailCount] = useState(0);
   const bottomRef = useRef(null);
   const taskStartRef = useRef(null);
 
@@ -27,6 +28,8 @@ export default function ChatScreen({ user, currentTaskId, currentTask, onTaskCom
   useEffect(() => {
     setShowCompleteForm(false);
     setCompletionOutput("");
+    setFailCount(0);
+    setPendingHelp(null);
     taskStartRef.current = currentTaskId ? Date.now() : null;
   }, [currentTaskId]);
 
@@ -72,16 +75,21 @@ export default function ChatScreen({ user, currentTaskId, currentTask, onTaskCom
         setCompletionOutput("");
         onTaskCompleted?.();
       } else {
+        const newFailCount = failCount + 1;
+        setFailCount(newFailCount);
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: t("chat.failed", { feedback: result.feedback }) },
         ]);
-        setPendingHelp(
-          t("chat.pendingHelpMsg", {
-            title: currentTask?.title || "this task",
-            criteria: currentTask?.completion_criteria || "not specified",
-          })
-        );
+        // FR-3.11: ikinci başarısızlıktan sonra yardım öner
+        if (newFailCount >= 2) {
+          setPendingHelp(
+            t("chat.pendingHelpMsg", {
+              title: currentTask?.title || "this task",
+              criteria: currentTask?.completion_criteria || "not specified",
+            })
+          );
+        }
       }
     } catch {
       setMessages((prev) => [
