@@ -3,8 +3,9 @@
 """
 from fastapi import APIRouter, Depends
 from app.models.user import UserProfile
-from app.core.auth import get_current_user, require_admin
-from app.content.progress_store import get_completion_stats, get_gaps, get_proficiency_summary
+from app.core.auth import get_current_user, require_admin, _load_users
+from app.content.progress_store import get_completion_stats, get_gaps, get_proficiency_summary, get_task_progress
+from app.content.task_parser import parse_tasks
 from app.llm.factory import get_llm_adapter
 from app.llm.prompt_builder import get_session_summary_prompt
 from app.api.chat import _sessions
@@ -67,7 +68,33 @@ def admin_user_progress(
     _admin: UserProfile = Depends(require_admin),
 ):
     """Yönetici: belirli bir çalışanın ilerleme raporu — SRS §FR-4.9, FR-4.10, FR-4.11"""
+    users = _load_users()
+    u = users.get(user_id, {})
+    area = u.get("area", "")
+    level = u.get("experience_level", "")
+    lang = u.get("language", "tr")
+
+    # Real total from learning path
+    progress_map = get_task_progress(user_id)
     stats = get_completion_stats(user_id)
+    if area and level:
+        all_tasks = parse_tasks(area, lang)
+        real_tasks = [t for t in all_tasks if level in t.levels]
+        notes = u.get("notes", [])
+        known = {n.get("key", "").lower() for n in notes if n.get("verified")}
+        real_tasks = [t for t in real_tasks if not (t.id.split("-")[1] in known and t.skippable)]
+        real_total = len(real_tasks)
+        completed = sum(1 for t in real_tasks if progress_map.get(t.id) and progress_map[t.id].status == "completed")
+        skipped = sum(1 for t in real_tasks if progress_map.get(t.id) and progress_map[t.id].status == "skipped")
+        pct = round(completed / real_total * 100, 1) if real_total else 0
+        stats = {
+            "total": real_total,
+            "completed": completed,
+            "skipped": skipped,
+            "pending": real_total - completed - skipped,
+            "completion_percentage": pct,
+        }
+
     gaps = get_gaps(user_id)
     proficiency = get_proficiency_summary(user_id)
     return {"user_id": user_id, "stats": stats, "gaps": gaps, "proficiency_tests": proficiency}
