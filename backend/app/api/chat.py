@@ -27,7 +27,7 @@ class ChatRequest(BaseModel):
     task_id: str | None = None
 
 
-GAP_QUESTION_THRESHOLD = 3  # Aynı görevde bu kadar soru → boşluk uyarısı
+GAP_QUESTION_THRESHOLD = 5  # Aynı görevde bu kadar soru → boşluk kaydı (FR-4.5)
 
 
 class ChatResponse(BaseModel):
@@ -70,16 +70,17 @@ def chat(
     history.append({"role": "user", "content": req.message})
     history.append({"role": "assistant", "content": reply})
 
-    # Gap detection: görev bazlı soru sayısını artır ve eşik kontrolü yap
+    # Gap detection — FR-4.5: eşik aşılınca bir kez boşluk kaydet
     gap_warning = False
     if req.task_id:
         increment_question_count(uid, req.task_id)
         progress = get_task_progress(uid)
         task_p = progress.get(req.task_id)
         question_count = task_p.question_count if task_p else 0
-        if question_count >= GAP_QUESTION_THRESHOLD:
+        if question_count == GAP_QUESTION_THRESHOLD:
+            # Sadece eşiğe ilk ulaşıldığında kaydet, her soruda değil
             record_gap(uid, req.task_id, "question_count")
-            gap_warning = True
+        gap_warning = question_count >= GAP_QUESTION_THRESHOLD
 
     now = datetime.utcnow().isoformat()
     return ChatResponse(reply=reply, timestamp=now, gap_warning=gap_warning)
