@@ -22,7 +22,7 @@ class Task(BaseModel):
 
 
 class TaskProgress(BaseModel):
-    task_id: str
+    task_id: str = ""
     status: TaskStatus = TaskStatus.pending
     elapsed_minutes: float = 0.0
     question_count: int = 0

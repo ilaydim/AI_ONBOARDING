@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { getMyProgress } from "../../services/api";
+import { getLearningPath } from "../../services/api";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-export default function ProgressBar({ onShowSummary }) {
+export default function ProgressBar({ onShowSummary, refreshKey }) {
   const [stats, setStats] = useState(null);
   const { t } = useLanguage();
 
   useEffect(() => {
-    getMyProgress().then(setStats).catch(() => {});
-  }, []);
+    getLearningPath().then((path) => {
+      const completed = path.filter(({ status }) => status === "completed").length;
+      const skipped = path.filter(({ status }) => status === "skipped").length;
+      const pending = path.filter(({ status }) => status === "pending" || status === "in_progress").length;
+      const total = path.length;
+      const pct = total > 0 ? Math.round((completed / total) * 1000) / 10 : 0;
+      setStats({ completed, skipped, pending, total, completion_percentage: pct });
+    }).catch(() => {});
+  }, [refreshKey]);
 
   if (!stats) return null;
   const pct = stats.completion_percentage || 0;

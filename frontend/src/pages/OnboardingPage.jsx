@@ -53,7 +53,7 @@ export default function OnboardingPage() {
           <p style={styles.userMeta}>{user.area} · {user.experience_level}</p>
         </div>
 
-        <ProgressBar key={refreshKey} onShowSummary={() => handleShowSummary(false)} />
+        <ProgressBar key={refreshKey} refreshKey={refreshKey} onShowSummary={() => handleShowSummary(false)} />
 
         {user.notes?.length > 0 && (
           <div style={styles.notesSection}>
