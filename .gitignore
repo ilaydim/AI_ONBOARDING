@@ -59,3 +59,9 @@ yarn-error.log*
 # Logs
 *.log
 logs/
+
+# Runtime data
+backend/data/
+
+# SRS and other large documents
+*.pdf
