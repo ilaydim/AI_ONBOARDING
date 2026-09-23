@@ -44,6 +44,7 @@ export default function ChatScreen({ user, currentTaskId, currentTask, onTaskCom
       setMessages((prev) => {
         const next = [...prev, { role: "assistant", content: data.reply }];
         if (data.gap_warning) next.push({ role: "system", content: t("chat.gapWarning") });
+        if (data.time_warning) next.push({ role: "system", content: t("chat.timeWarning") });
         return next;
       });
     } catch {

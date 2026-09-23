@@ -14,7 +14,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 | FR-1 Profil & giriş | ✅ |
 | FR-2 Şirket bilgi katmanı | ✅ |
 | FR-3 Görev bazlı öğrenme | ✅ |
-| FR-4 İlerleme & boşluk | 🟡 (süre bazlı boşluk ve kapsam dışı log yok) |
+| FR-4 İlerleme & boşluk | 🟡 (kapsam dışı soru logu yok) |
 | LLM-1..3 Adapter/prompt/davranış | ✅ |
 | CM-1..4 İçerik yönetimi | ✅ |
 | NFR | 🟡 (HTTPS, performans ölçümü, kullanılabilirlik testi kaldı) |
@@ -69,6 +69,8 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 - [x] Tamamlanma yüzdesi + `ProgressBar` (FR-4.2, NFR-3.4)
 - [x] Oturum özeti LLM ile (`POST /progress/me/session-summary`) (FR-4.4)
 - [x] Kural tabanlı boşluk tespiti; aynı konuda eşik (5) aşılınca **bir kez** kayıt (FR-4.5)
+- [x] Süre bazlı boşluk: görevdeki aktif süre (mesajlar arası en fazla 5 dk sayılır) tahmini sürenin `time_multiplier` katını aşarsa boşluk (`time_exceeded`) bir kez kaydedilir ve sohbette proaktif yardım mesajı çıkar (FR-4.5, FR-4.6)
+- [x] Eşikler `config.yaml`'dan okunuyor (`question_threshold`, `time_multiplier`); koddaki sabit kaldırıldı
 - [x] Başarısız yeterlilik testi boşluk olarak kaydedilir (FR-4.7)
 - [x] Yönetici raporu: ilerleme, boşluklar, bekleyen görev sayısı (FR-4.9–4.11)
 
@@ -77,7 +79,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 - [x] Atomik JSON yazma (tmp + fsync + `os.replace`) ve bozuk dosyada `.corrupt` yedekleyip devam etme (NFR-5.2)
 - [x] Konuşma geçmişi sınırı aşınca eski mesajlar LLM ile özetlenir, özet başarısızsa atılır (LLM-2.4; `llm/history.py`)
 - [x] LLM hatalarında kullanıcıya genel mesaj, ayrıntı yalnızca logda ve yalnızca hata sınıf adı (NFR-3.3, NFR-7.4)
-- [x] `MockAdapter` + 27 pytest testi: chunking, task parser, sanitize, geçmiş kısaltma, progress store, API akışları (NFR-6.1–6.3; `cd backend && pytest`)
+- [x] `MockAdapter` + 31 pytest testi: chunking, task parser, sanitize, geçmiş kısaltma, progress store, API akışları (NFR-6.1–6.3; `cd backend && pytest`)
 - [x] Rate limiting: kullanıcı başına 15 çağrı/dk (NFR-2.9)
 - [x] Oturum 30 dk hareketsizlikte kapanır (`useInactivityLogout`) (NFR-2.8)
 - [x] Admin endpoint'leri `require_admin` ile korunuyor (NFR-2.5)
@@ -94,7 +96,6 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 
 ### Orta öncelik
 
-- [ ] **FR-4.5 / 4.6 Süre bazlı boşluk** — `config.yaml`'daki `time_multiplier` hiçbir yerde kullanılmıyor; tahmini sürenin 2 katı aşılınca boşluk sinyali ve proaktif yardım yok. Şu an yalnızca soru sayısı var (`gap_warning`)
 - [ ] **FR-4.8 Kapsam dışı ama alakalı soruların loglanması** — `chat.py`'de karşılığı yok
 - [ ] **CM-1.5 Eksik md dosyası** — `load_markdown` eksik dosyada sessizce `""` döndürüyor; anlaşılır hata / uyarı ver, ilgili alanı devre dışı bırak (NFR-5.3)
 - [ ] **NFR-3.5** Yanıt beklerken yükleniyor göstergesi (streaming kullanılmıyorsa spinner)
@@ -119,7 +120,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 - SRS'te FR-3.13–3.15 numaraları hem Faz 1 tablosunda hem Faz 2 "Ek Gereksinimler"de tekrar ediyor (belge hatası).
 - Bu dosyadaki ilk sürümde FR-1.2, FR-2.5, FR-3.15, FR-3.16, NFR-2.4 "doğrula" olarak listelenmişti; kod incelenip yapıldı olarak taşındı.
 - SRS'te LLM sağlayıcısı Claude; koddaki varsayılan `config.yaml` şu an **Groq / llama-3.3-70b**. Adapter sayesinde uygunluk sorunu yok, ama demo öncesi karar verilmeli.
-- Boşluk eşiği SRS'te "3'ten fazla soru". `chat.py` içinde `GAP_QUESTION_THRESHOLD = 5` sabit yazılı (commit `537b050`); `config.yaml`'daki `question_threshold: 3` kullanılmıyor. Tek kaynağa indir ve SRS ile hizala.
+- Boşluk eşiği SRS'te "3'ten fazla soru"; `config.yaml`'da bilinçli olarak 5 (commit `537b050`). Artık tek kaynak config. SRS ile fark akademik metinde belirtilmeli.
 - İlerleme, kullanıcı ve log verisi `backend/data/` altında; git'e girmemeli (NFR-8.2).
 
 ---

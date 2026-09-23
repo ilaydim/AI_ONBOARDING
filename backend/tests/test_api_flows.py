@@ -118,3 +118,41 @@ def test_order_handles_cycles():
     from app.models.task import Task
     mk = lambda i, d: Task(id=i, title=i, levels=[], dependency=d, expected_output="", completion_criteria="", estimated_hours=1)
     assert len(_order_by_dependencies([mk("a", "b"), mk("b", "a")])) == 2
+
+
+def test_question_threshold_records_gap_once(env):
+    client, _ = env
+    for _ in range(7):
+        r = client.post("/chat", json={"message": "help", "task_id": "backend-001"}).json()
+    assert r["gap_warning"] is True
+    gaps = [g for g in ps.get_gaps("u1") if g.signal == "question_count"]
+    assert len(gaps) == 1 and gaps[0].count == 1
+
+
+def test_time_exceeded_records_gap_once(env):
+    client, _ = env
+    # backend-001 tahmini 1 saat, çarpan 2 → 120 dk üstü
+    data = ps._load("u1")
+    data.setdefault("tasks", {})["backend-001"] = {"active_minutes": 130.0}
+    ps._save("u1", data)
+    r1 = client.post("/chat", json={"message": "hi", "task_id": "backend-001"}).json()
+    r2 = client.post("/chat", json={"message": "hi", "task_id": "backend-001"}).json()
+    assert r1["time_warning"] and r2["time_warning"]
+    gaps = [g for g in ps.get_gaps("u1") if g.signal == "time_exceeded"]
+    assert len(gaps) == 1 and gaps[0].count == 1
+
+
+def test_no_time_warning_when_within_estimate(env):
+    client, _ = env
+    r = client.post("/chat", json={"message": "hi", "task_id": "backend-001"}).json()
+    assert r["time_warning"] is False
+
+
+def test_idle_time_is_capped(tmp_path, monkeypatch):
+    monkeypatch.setattr(ps, "DATA_DIR", str(tmp_path))
+    ps.touch_task_activity("u9", "t")
+    data = ps._load("u9")
+    data["tasks"]["t"]["last_activity"] = "2000-01-01T00:00:00"
+    ps._save("u9", data)
+    assert ps.touch_task_activity("u9", "t") == ps.MAX_IDLE_MINUTES
+

@@ -4,6 +4,7 @@ Faz 2'de veritabanına taşınacak.
 """
 import json
 import os
+from datetime import datetime
 from app.models.task import TaskProgress, TaskStatus, LearningPath
 from app.models.session import GapRecord
 
@@ -75,6 +76,26 @@ def resume_task(user_id: str, task_id: str):
         _save(user_id, data)
 
 
+MAX_IDLE_MINUTES = 5  # iki mesaj arası bu süreden uzunsa fazlası "aktif süre" sayılmaz
+
+
+def touch_task_activity(user_id: str, task_id: str) -> float:
+    """
+    Görev üzerindeki aktif süreyi biriktirir (FR-4.6). Uzun boşluklar (öğle arası,
+    ertesi gün) sayılmaz; böylece yalnızca gerçekten görevle geçen süre ölçülür.
+    """
+    now = datetime.utcnow()
+    data = _load(user_id)
+    entry = data.setdefault("tasks", {}).setdefault(task_id, {})
+    last = entry.get("last_activity")
+    if last:
+        delta = (now - datetime.fromisoformat(last)).total_seconds() / 60
+        entry["active_minutes"] = entry.get("active_minutes", 0.0) + min(delta, MAX_IDLE_MINUTES)
+    entry["last_activity"] = now.isoformat()
+    _save(user_id, data)
+    return entry.get("active_minutes", 0.0)
+
+
 def increment_question_count(user_id: str, task_id: str):
     data = _load(user_id)
     task = data.setdefault("tasks", {}).setdefault(task_id, {"question_count": 0})
@@ -84,11 +105,15 @@ def increment_question_count(user_id: str, task_id: str):
 
 # ─── Gap detection — SRS §4.4 ────────────────────────────────────────────────
 
+def has_gap(user_id: str, topic: str, signal: str) -> bool:
+    return any(g["topic"] == topic and g["signal"] == signal for g in _load(user_id).get("gaps", []))
+
+
 def record_gap(user_id: str, topic: str, signal: str):
     data = _load(user_id)
     gaps = data.setdefault("gaps", [])
     for g in gaps:
-        if g["topic"] == topic:
+        if g["topic"] == topic and g["signal"] == signal:
             g["count"] += 1
             _save(user_id, data)
             return

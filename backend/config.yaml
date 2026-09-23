@@ -11,7 +11,7 @@ content:
   top_k_chunks: 3
 
 gap_detection:
-  question_threshold: 3       # aynı konuda kaç soru = boşluk sinyali
+  question_threshold: 5       # aynı görevde kaç soru = boşluk sinyali (SRS: 3; commit 537b050'de 5'e çıkarıldı)
   time_multiplier: 2.0        # tahmini sürenin kaç katı geçince boşluk sinyali
 
 auth:
