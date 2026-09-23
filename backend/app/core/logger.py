@@ -16,6 +16,12 @@ def _write(entry: dict):
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+def describe_error(e: Exception) -> str:
+    """Log için hata özeti: sınıf adı + varsa HTTP durum kodu (ör. NotFoundError:404). Mesaj metni yazılmaz (NFR-7.4)."""
+    status = getattr(e, "status_code", None)
+    return f"{type(e).__name__}:{status}" if status else type(e).__name__
+
+
 def log_llm_call(user_id: str, elapsed_ms: float, success: bool, error: str | None = None):
     """NFR-7.1: LLM API çağrısı logu."""
     _write({
