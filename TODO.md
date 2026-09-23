@@ -18,7 +18,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 | LLM-1..3 Adapter/prompt/davranış | ✅ |
 | CM-1..4 İçerik yönetimi | ✅ |
 | NFR | 🟡 (HTTPS, performans ölçümü, kullanılabilirlik testi kaldı) |
-| Demo başarı senaryosu (8.4) | ⬜ uçtan uca doğrulanmadı |
+| Demo başarı senaryosu (8.4) | 🟡 sahte LLM ile otomatik test geçiyor; gerçek LLM + arayüzle elle deneme kaldı |
 
 ---
 
@@ -38,7 +38,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 - [x] Admin formunda alana özel serbest profil notu ekleme (FR-1.2, `AdminPanel.jsx`)
 - [x] Girişte kullanıcıyı adıyla karşılama / alana yönlendirme (FR-1.5)
 - [x] Yeterlilik testi: üretim + değerlendirme (`/proficiency/generate`, `/submit`) (FR-1.7–1.10)
-- [x] Test geçilirse profil notu güncellenir, görev atlanır; geçilmezse kalır (FR-1.8, FR-1.9)
+- [x] Test geçilirse profil notu güncellenir, görev atlanır; geçilmezse kalır (FR-1.8, FR-1.9). Not anahtarı görev başlığı/beklenen çıktısıyla kelime sınırıyla eşleşir (`is_covered_by_verified_note`); eskiden görev ID'sinin sayısal kısmıyla kıyaslandığı için hiç eşleşmiyordu
 - [x] Admin kullanıcı silme (NFR-8.1 Faz 1 karşılığı)
 
 ### Şirket bilgi katmanı (FR-2, CM)
@@ -48,7 +48,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 - [x] Deneyim seviyesine göre dil tonu (FR-2.7)
 - [x] İçerik her istekte diskten okunuyor, cache yok → md değişikliği sonraki oturumda yansır (FR-2.5)
 - [x] Oturum içi konuşma geçmişi (FR-2.8), farklı açıklama isteği (FR-2.9)
-- [x] TR + EN içerik: 5 alan × (overview, tasks, resources) + company × 3 (FR-2.13, CM-2.1–2.2, CM-4.3)
+- [x] TR + EN içerik: 5 alan × (overview, tasks, resources) + company × 3; backend'e Docker görevi (`backend-009`) eklendi, demo senaryosu için (FR-2.13, CM-2.1–2.2, CM-4.3)
 - [x] Chunking (başlık/paragraf sınırı, overlap) saf Python + keyword ile alakalı chunk seçimi (CM-4.1, `loader.py`)
 - [x] Alan listesini dizinden keşfetme (CM-1.4, CM-2.4)
 - [x] `tasks.md` parser (CM-3.x, `task_parser.py`)
@@ -82,12 +82,13 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 - [x] Atomik JSON yazma (tmp + fsync + `os.replace`) ve bozuk dosyada `.corrupt` yedekleyip devam etme (NFR-5.2)
 - [x] Konuşma geçmişi sınırı aşınca eski mesajlar LLM ile özetlenir, özet başarısızsa atılır (LLM-2.4; `llm/history.py`)
 - [x] LLM hatalarında kullanıcıya genel mesaj, ayrıntı yalnızca logda ve yalnızca hata sınıf adı (NFR-3.3, NFR-7.4)
-- [x] `MockAdapter` + 39 pytest testi: chunking, task parser, sanitize, geçmiş kısaltma, progress store, API akışları (NFR-6.1–6.3; `cd backend && pytest`)
+- [x] `MockAdapter` + 45 pytest testi: chunking, task parser, sanitize, geçmiş kısaltma, progress store, API akışları (NFR-6.1–6.3; `cd backend && pytest`)
 - [x] Rate limiting: kullanıcı başına 15 çağrı/dk (NFR-2.9)
 - [x] Oturum 30 dk hareketsizlikte kapanır (`useInactivityLogout`) (NFR-2.8)
 - [x] Admin endpoint'leri `require_admin` ile korunuyor (NFR-2.5)
 - [x] JSON Lines log: LLM çağrısı, auth hatası, görev/test eventleri (NFR-7.1–7.3)
 - [x] TR/EN arayüz (`LanguageContext`, `translations.js`) (NFR-3.2)
+- [x] LLM yanıtı beklenirken yükleniyor göstergesi: sohbet, görev değerlendirme, yeterlilik testi (NFR-3.5)
 
 ---
 
@@ -95,11 +96,10 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 
 ### Yüksek öncelik
 
-- [ ] **8.4 Demo senaryosunu uçtan uca çalıştır** (13 adım: Ayşe Kaya / Backend / Junior / "Docker bilmiyor" → test → görev atlama → raporu görme). Sonuçları dokümante et.
+- [ ] **8.4 Demo senaryosunu gerçek LLM ile elle çalıştır** — 13 adım otomatik testte (`tests/test_demo_scenario.py`) sahte LLM ile geçiyor; gerçek Groq/Claude yanıtlarıyla arayüzden bir kez denenmeli, çıktılar/ekran görüntüleri dokümante edilmeli
 
 ### Orta öncelik
 
-- [ ] **NFR-3.5** Yanıt beklerken yükleniyor göstergesi (streaming kullanılmıyorsa spinner)
 - [ ] **NFR-1.x** Performans: ilk token ≤ 3 sn, tam yanıt ≤ 10 sn ölç
 - [ ] **NFR-3.1** 2–3 kişiyle kullanılabilirlik testi (2 dk içinde ilk görev, tamamlama oranı ≥ %80)
 

@@ -5,8 +5,9 @@ from app.llm.adapter import LLMAdapter
 
 
 class MockAdapter(LLMAdapter):
-    def __init__(self, reply: str = "mock reply", fail: bool = False):
+    def __init__(self, reply: str = "mock reply", fail: bool = False, replies: list[str] | None = None):
         self.reply = reply
+        self.replies = list(replies or [])  # verilirse sırayla tüketilir, bitince `reply` döner
         self.fail = fail
         self.calls: list[dict] = []
 
@@ -18,4 +19,4 @@ class MockAdapter(LLMAdapter):
         })
         if self.fail:
             raise RuntimeError("mock LLM failure")
-        return self.reply
+        return self.replies.pop(0) if self.replies else self.reply
