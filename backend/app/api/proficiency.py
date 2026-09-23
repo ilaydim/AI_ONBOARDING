@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from app.models.user import UserProfile
 from app.core.auth import get_current_user
+from app.api.deps import area_ready
 from app.content.loader import load_area_content
 from app.llm.factory import get_llm_adapter
 from app.llm.prompt_builder import get_quiz_prompt
@@ -29,7 +30,7 @@ class SubmitTestRequest(BaseModel):
 @router.post("/generate")
 def generate_test(
     req: GenerateTestRequest,
-    current_user: UserProfile = Depends(get_current_user),
+    current_user: UserProfile = Depends(area_ready),
 ):
     area_content = load_area_content(current_user.area, current_user.language)
     prompt = get_quiz_prompt(current_user.language).format(

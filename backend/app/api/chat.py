@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.models.user import UserProfile
 from app.models.session import Message
 from app.core.auth import get_current_user
+from app.api.deps import area_ready
 from app.content.loader import build_context
 from app.content.progress_store import increment_question_count, record_gap, get_task_progress, touch_task_activity, has_gap
 from app.content.task_parser import parse_tasks
@@ -42,7 +43,7 @@ class ChatResponse(BaseModel):
 @router.post("", response_model=ChatResponse)
 def chat(
     req: ChatRequest,
-    current_user: UserProfile = Depends(get_current_user),
+    current_user: UserProfile = Depends(area_ready),
 ):
     uid = current_user.id
     check_llm_rate_limit(uid)

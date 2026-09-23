@@ -4,15 +4,11 @@ tasks.md dosyasını parse eder — SRS §6.3
 import re
 import os
 from app.models.task import Task
-from app.core.settings import get_config
+from app.content import loader
 
 
 def parse_tasks(area: str, language: str = "tr") -> list[Task]:
-    cfg = get_config()
-    base_path = os.path.normpath(
-        os.path.join(os.path.dirname(__file__), "../../",
-                     cfg["content"]["base_path"], language, "areas", area, "tasks.md")
-    )
+    base_path = os.path.join(loader._get_content_path(language), "areas", area, "tasks.md")
     if not os.path.exists(base_path):
         return []
 

@@ -38,6 +38,17 @@ def log_auth_failure(username: str, reason: str):
     })
 
 
+def log_content_issue(area: str, language: str, problems: list[str]):
+    """CM-1.5: eksik/hatalı içerik dosyası."""
+    _write({
+        "ts": datetime.utcnow().isoformat(),
+        "event": "content_issue",
+        "area": area,
+        "language": language,
+        "problems": problems,
+    })
+
+
 def log_task_event(user_id: str, task_id: str, event: str, passed: bool | None = None):
     """NFR-7.3: Görev tamamlama ve yeterlilik testi eventleri."""
     _write({

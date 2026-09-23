@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.models.user import UserProfile, ExperienceLevel
 from app.models.task import Task, TaskStatus, TaskCompletionRequest, TaskCompletionResult
 from app.core.auth import get_current_user
+from app.api.deps import area_ready
 from app.content.task_parser import parse_tasks
 from app.content.progress_store import (
     get_task_progress, save_task_progress, mark_task_completed,
@@ -85,7 +86,7 @@ def _apply_profile_notes(tasks: list[Task], notes: list, level: str) -> list[Tas
 
 
 @router.get("/learning-path")
-def get_learning_path(current_user: UserProfile = Depends(get_current_user)):
+def get_learning_path(current_user: UserProfile = Depends(area_ready)):
     all_tasks = parse_tasks(current_user.area, current_user.language)
     level_tasks = _filter_tasks_for_level(all_tasks, current_user.experience_level)
     filtered = _apply_profile_notes(
@@ -113,7 +114,7 @@ def get_learning_path(current_user: UserProfile = Depends(get_current_user)):
 @router.post("/complete", response_model=TaskCompletionResult)
 def complete_task(
     req: TaskCompletionRequest,
-    current_user: UserProfile = Depends(get_current_user),
+    current_user: UserProfile = Depends(area_ready),
 ):
     all_tasks = parse_tasks(current_user.area, current_user.language)
     task = next((t for t in all_tasks if t.id == req.task_id), None)

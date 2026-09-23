@@ -46,13 +46,66 @@ def load_area_content(area: str, language: str = "tr") -> str:
     return "\n\n".join(parts)
 
 
-def list_available_areas(language: str = "tr") -> list[str]:
-    base = _get_content_path(language)
-    areas_dir = os.path.join(base, "areas")
+AREA_FILES = ("overview.md", "tasks.md", "resources.md")
+
+
+def _all_area_dirs(language: str) -> list[str]:
+    areas_dir = os.path.join(_get_content_path(language), "areas")
     if not os.path.exists(areas_dir):
         return []
-    return [d for d in os.listdir(areas_dir)
-            if os.path.isdir(os.path.join(areas_dir, d))]
+    return sorted(d for d in os.listdir(areas_dir) if os.path.isdir(os.path.join(areas_dir, d)))
+
+
+def validate_area(area: str, language: str = "tr") -> dict:
+    """
+    CM-1.5 / NFR-5.3: alan içeriğini denetler.
+    errors   → alan kullanılamaz (dosya eksik/boş); alan devre dışı bırakılır
+    warnings → alan çalışır ama içerikte sorun var (ör. şemaya uymayan görev, CM-3.5)
+    """
+    area_dir = os.path.join(_get_content_path(language), "areas", area)
+    errors, warnings = [], []
+    if not os.path.isdir(area_dir):
+        return {"errors": [f"areas/{area}/ directory not found ({language})"], "warnings": []}
+    for filename in AREA_FILES:
+        fp = os.path.join(area_dir, filename)
+        if not os.path.exists(fp):
+            errors.append(f"areas/{area}/{filename} is missing ({language})")
+        elif not load_markdown(fp).strip():
+            errors.append(f"areas/{area}/{filename} is empty ({language})")
+    if not errors:
+        from app.content.task_parser import parse_tasks
+        text = load_markdown(os.path.join(area_dir, "tasks.md"))
+        declared = len(re.findall(r"^## (?:Görev|Task):", text, re.MULTILINE))
+        parsed = len(parse_tasks(area, language))
+        if parsed < declared:
+            warnings.append(f"areas/{area}/tasks.md: {declared - parsed} task(s) skipped, missing required fields (ID etc.) ({language})")
+        if parsed == 0:
+            errors.append(f"areas/{area}/tasks.md has no valid tasks ({language})")
+    return {"errors": errors, "warnings": warnings}
+
+
+def is_area_available(area: str, language: str = "tr") -> bool:
+    return not validate_area(area, language)["errors"]
+
+
+def list_available_areas(language: str = "tr") -> list[str]:
+    """Yalnızca kullanılabilir (geçerli) alanlar; bozuk alan listeden çıkar (NFR-5.3)."""
+    return [a for a in _all_area_dirs(language) if is_area_available(a, language)]
+
+
+def content_health(languages: tuple[str, ...] = ("tr", "en")) -> dict:
+    """Tüm dillerdeki tüm alanların denetimi (yönetici raporu / başlangıç taraması, CM-1.4)."""
+    report = {}
+    for lang in languages:
+        company_dir = os.path.join(_get_content_path(lang), "company")
+        company = [f"company/{f} is missing or empty ({lang})"
+                   for f in ("overview.md", "culture.md", "processes.md")
+                   if not load_markdown(os.path.join(company_dir, f)).strip()]
+        report[lang] = {
+            "company_warnings": company,
+            "areas": {a: validate_area(a, lang) for a in _all_area_dirs(lang)},
+        }
+    return report
 
 
 # ─── Chunking — SRS §6.4 ─────────────────────────────────────────────────────
