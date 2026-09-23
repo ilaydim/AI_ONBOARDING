@@ -69,7 +69,7 @@ def generate_session_summary(current_user: UserProfile = Depends(get_current_use
             user_message=prompt,
         )
     except Exception as e:
-        return {"summary": f"Özet üretilemedi: {str(e)}"}
+        return {"summary": "Özet şu an üretilemedi. Lütfen daha sonra tekrar dene."}
 
     return {"summary": summary}
 

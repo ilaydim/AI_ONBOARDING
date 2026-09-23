@@ -13,7 +13,8 @@ from app.content.progress_store import (
 )
 from app.content.loader import load_area_content
 from app.llm.factory import get_llm_adapter
-from app.core.logger import log_task_event
+from app.core.logger import log_task_event, log_llm_call
+from app.core.sanitize import sanitize_user_input
 from app.llm.prompt_builder import get_evaluation_prompt
 import json, re
 
@@ -81,7 +82,7 @@ def complete_task(
     eval_prompt = get_evaluation_prompt(current_user.language).format(
         task_title=task.title,
         criteria=task.completion_criteria,
-        user_output=req.user_output,
+        user_output=sanitize_user_input(req.user_output),
     )
 
     adapter = get_llm_adapter()
@@ -98,7 +99,8 @@ def complete_task(
         else:
             result_data = {"passed": False, "feedback": raw}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"LLM evaluation error: {str(e)}")
+        log_llm_call(current_user.id, elapsed_ms=0, success=False, error=type(e).__name__)
+        raise HTTPException(status_code=503, detail="Değerlendirme şu an yapılamıyor. Lütfen tekrar dene.")
 
     passed = result_data.get("passed", False)
     feedback = result_data.get("feedback", "")

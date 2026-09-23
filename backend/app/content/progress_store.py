@@ -18,14 +18,25 @@ def _load(user_id: str) -> dict:
     fp = _progress_file(user_id)
     if not os.path.exists(fp):
         return {"tasks": {}, "gaps": [], "session_count": 0}
-    with open(fp) as f:
-        return json.load(f)
+    try:
+        with open(fp, encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        # NFR-5.2: bozuk dosyayı yedekle, boş ilerleme ile devam et
+        os.replace(fp, fp + ".corrupt")
+        return {"tasks": {}, "gaps": [], "session_count": 0}
 
 
 def _save(user_id: str, data: dict):
     os.makedirs(DATA_DIR, exist_ok=True)
-    with open(_progress_file(user_id), "w") as f:
+    fp = _progress_file(user_id)
+    tmp = fp + ".tmp"
+    # Atomik yazma (NFR-5.2): önce geçici dosya, başarılıysa yerine koy
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, fp)
 
 
 # ─── Task progress ────────────────────────────────────────────────────────────

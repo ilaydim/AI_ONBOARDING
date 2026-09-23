@@ -9,7 +9,7 @@ from app.content.loader import load_area_content
 from app.llm.factory import get_llm_adapter
 from app.llm.prompt_builder import get_quiz_prompt
 from app.content.progress_store import record_proficiency_attempt, record_gap
-from app.core.logger import log_task_event
+from app.core.logger import log_task_event, log_llm_call
 import json, re
 
 router = APIRouter(prefix="/proficiency", tags=["proficiency"])
@@ -49,7 +49,8 @@ def generate_test(
         json_str = re.search(r'\{.*\}', raw, re.DOTALL)
         data = json.loads(json_str.group()) if json_str else {}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Test generation error: {str(e)}")
+        log_llm_call(current_user.id, elapsed_ms=0, success=False, error=type(e).__name__)
+        raise HTTPException(status_code=503, detail="Test şu an oluşturulamıyor. Lütfen tekrar dene.")
 
     return data
 

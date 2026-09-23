@@ -12,6 +12,8 @@ from app.llm.factory import get_llm_adapter
 from app.llm.prompt_builder import build_system_prompt
 from app.core.logger import log_llm_call
 from app.core.rate_limit import check_llm_rate_limit
+from app.core.sanitize import sanitize_user_input
+from app.llm.history import trim_history
 from datetime import datetime
 import time
 import json
@@ -43,11 +45,15 @@ def chat(
 ):
     uid = current_user.id
     check_llm_rate_limit(uid)
-    history = _sessions.setdefault(uid, [])
+    message = sanitize_user_input(req.message)
+    if not message:
+        raise HTTPException(status_code=400, detail="Empty message")
+    adapter = get_llm_adapter()
+    history = _sessions[uid] = trim_history(_sessions.get(uid, []), adapter)
 
     context = build_context(
         area=current_user.area,
-        query=req.message,
+        query=message,
         language=current_user.language,
     )
 
@@ -57,17 +63,16 @@ def chat(
         language=current_user.language,
     )
 
-    adapter = get_llm_adapter()
     t0 = time.time()
     try:
-        reply = adapter.send_message(system_prompt, history, req.message)
+        reply = adapter.send_message(system_prompt, history, message)
         log_llm_call(uid, elapsed_ms=(time.time() - t0) * 1000, success=True)
     except Exception as e:
-        log_llm_call(uid, elapsed_ms=(time.time() - t0) * 1000, success=False, error=str(e))
-        raise HTTPException(status_code=503, detail=f"LLM servisi şu an erişilemiyor: {str(e)}")
+        log_llm_call(uid, elapsed_ms=(time.time() - t0) * 1000, success=False, error=type(e).__name__)
+        raise HTTPException(status_code=503, detail="LLM servisi şu an erişilemiyor. Lütfen biraz sonra tekrar dene.")
 
     # Geçmişi güncelle
-    history.append({"role": "user", "content": req.message})
+    history.append({"role": "user", "content": message})
     history.append({"role": "assistant", "content": reply})
 
     # Gap detection — FR-4.5: eşik aşılınca bir kez boşluk kaydet
