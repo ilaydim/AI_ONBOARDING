@@ -29,3 +29,37 @@ def test_dependency_none_and_not_skippable():
 
 def test_missing_id_rejected():
     assert _parse_block(BLOCK.replace("- **ID:** backend-002\n", "")) is None
+
+
+def _task(title, expected="", skippable=True):
+    from app.models.task import Task
+    return Task(id="backend-009", title=title, levels=["junior"], expected_output=expected,
+                completion_criteria="c", estimated_hours=1, skippable=skippable)
+
+
+def test_verified_note_matches_title_keyword():
+    from app.content.task_parser import is_covered_by_verified_note
+    assert is_covered_by_verified_note(_task("Containerize the Service with Docker"), {"docker"})
+    assert is_covered_by_verified_note(_task("Servisi Docker ile Konteynerleştir"), {"docker"})
+
+
+def test_verified_note_matches_expected_output():
+    from app.content.task_parser import is_covered_by_verified_note
+    assert is_covered_by_verified_note(_task("Setup", expected="Docker image is built"), {"docker"})
+
+
+def test_verified_note_ignores_unrelated_and_partial_words():
+    from app.content.task_parser import is_covered_by_verified_note
+    assert not is_covered_by_verified_note(_task("Learn Kubernetes"), {"docker"})
+    assert not is_covered_by_verified_note(_task("Write a Dockerfile"), {"docker"})
+
+
+def test_non_skippable_task_never_removed_by_note():
+    from app.content.task_parser import is_covered_by_verified_note
+    assert not is_covered_by_verified_note(_task("Docker basics", skippable=False), {"docker"})
+
+
+def test_verified_keys_only_verified_notes():
+    from app.content.task_parser import verified_keys
+    notes = [{"key": " Docker ", "verified": True}, {"key": "Python", "verified": False}]
+    assert verified_keys(notes) == {"docker"}

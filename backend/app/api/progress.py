@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from app.models.user import UserProfile
 from app.core.auth import get_current_user, require_admin, _load_users
 from app.content.progress_store import get_completion_stats, get_gaps, get_proficiency_summary, get_task_progress
-from app.content.task_parser import parse_tasks
+from app.content.task_parser import parse_tasks, is_covered_by_verified_note, verified_keys
 from app.models.task import TaskStatus
 from app.llm.factory import get_llm_adapter
 from app.llm.prompt_builder import get_session_summary_prompt
@@ -95,8 +95,8 @@ def admin_user_progress(
         all_tasks = parse_tasks(area, lang)
         real_tasks = [t for t in all_tasks if level in t.levels]
         notes = u.get("notes", [])
-        known = {n.get("key", "").lower() for n in notes if n.get("verified")}
-        real_tasks = [t for t in real_tasks if not (t.id.split("-")[1] in known and t.skippable)]
+        known = verified_keys(notes)
+        real_tasks = [t for t in real_tasks if not is_covered_by_verified_note(t, known)]
         real_total = len(real_tasks)
         completed = sum(1 for t in real_tasks if progress_map.get(t.id) and progress_map[t.id].status == "completed")
         skipped = sum(1 for t in real_tasks if progress_map.get(t.id) and progress_map[t.id].status == "skipped")

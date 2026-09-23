@@ -71,3 +71,12 @@
 - **Tamamlanma Kriteri:** En az 3 teknik borç alanı tespit edildi ve azaltma önerisi sunuldu
 - **Tahmini Süre:** 3 saat
 - **Atlanabilir:** Evet
+
+## Görev: Servisi Docker ile Konteynerleştir
+- **ID:** backend-009
+- **Seviye:** junior, mid
+- **Bağımlılık:** backend-002
+- **Beklenen Çıktı:** Docker imajı oluşturulup servis konteyner içinde çalıştırılır
+- **Tamamlanma Kriteri:** `docker run` ile servis ayağa kalkıyor ve `/health` endpoint'i 200 dönüyor
+- **Tahmini Süre:** 2 saat
+- **Atlanabilir:** Evet

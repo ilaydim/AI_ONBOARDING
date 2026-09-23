@@ -64,3 +64,22 @@ def _parse_block(block: str) -> Task | None:
         estimated_hours=estimated_hours,
         skippable=skippable,
     )
+
+
+def is_covered_by_verified_note(task: Task, verified_keys: set[str]) -> bool:
+    """
+    FR-1.8 / FR-3.2: yeterlilik testiyle doğrulanmış bir profil notu (ör. "docker"),
+    görev başlığında veya beklenen çıktısında geçiyorsa ve görev atlanabilirse görev yoldan çıkar.
+    Faz 1: basit anahtar kelime eşleştirme (büyük/küçük harf duyarsız, kelime sınırıyla).
+    """
+    if not task.skippable:
+        return False
+    text = f"{task.title} {task.expected_output}"
+    return any(
+        k and re.search(rf"\b{re.escape(k)}\b", text, re.IGNORECASE)
+        for k in verified_keys
+    )
+
+
+def verified_keys(notes: list[dict]) -> set[str]:
+    return {n.get("key", "").strip().lower() for n in notes if n.get("verified")}

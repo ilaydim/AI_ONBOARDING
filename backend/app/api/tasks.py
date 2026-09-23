@@ -7,7 +7,7 @@ from app.models.user import UserProfile, ExperienceLevel
 from app.models.task import Task, TaskStatus, TaskCompletionRequest, TaskCompletionResult
 from app.core.auth import get_current_user
 from app.api.deps import area_ready
-from app.content.task_parser import parse_tasks
+from app.content.task_parser import parse_tasks, is_covered_by_verified_note, verified_keys
 from app.content.progress_store import (
     get_task_progress, save_task_progress, mark_task_completed,
     mark_task_skipped, resume_task, get_completion_stats,
@@ -70,19 +70,8 @@ def _apply_profile_notes(tasks: list[Task], notes: list, level: str) -> list[Tas
     Profil notlarına göre bazı görevleri atla.
     Basit keyword eşleştirme — Faz 1 implementasyonu.
     """
-    known_topics = set()
-    for note in notes:
-        if note.get("verified"):
-            # verified nota göre ilgili keyword'ü "biliyor" say
-            known_topics.add(note.get("key", "").lower())
-
-    result = []
-    for task in tasks:
-        task_key = task.id.split("-")[1] if "-" in task.id else task.id
-        if task_key in known_topics and task.skippable:
-            continue
-        result.append(task)
-    return result
+    known = verified_keys(notes)
+    return [t for t in tasks if not is_covered_by_verified_note(t, known)]
 
 
 @router.get("/learning-path")

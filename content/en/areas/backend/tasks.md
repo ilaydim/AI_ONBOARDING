@@ -71,3 +71,12 @@
 - **Completion Criteria:** At least 3 technical debt areas identified with reduction proposals
 - **Estimated Duration:** 3 hours
 - **Skippable:** Yes
+
+## Task: Containerize the Service with Docker
+- **ID:** backend-009
+- **Level:** junior, mid
+- **Dependency:** backend-002
+- **Expected Output:** A Docker image is built and the service runs inside a container
+- **Completion Criteria:** The service starts with `docker run` and the `/health` endpoint returns 200
+- **Estimated Duration:** 2 hours
+- **Skippable:** Yes
