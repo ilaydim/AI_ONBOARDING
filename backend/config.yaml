@@ -14,5 +14,9 @@ gap_detection:
   question_threshold: 5       # aynı görevde kaç soru = boşluk sinyali (SRS: 3; commit 537b050'de 5'e çıkarıldı)
   time_multiplier: 2.0        # tahmini sürenin kaç katı geçince boşluk sinyali
 
+server:
+  cors_origins:            # frontend'in çalıştığı adres(ler); deploy'da değiştir
+    - http://localhost:3000
+
 auth:
   token_expire_minutes: 480

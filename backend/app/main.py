@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.content.loader import content_health
+from app.core.settings import get_config
 from app.core.logger import log_content_issue
 from app.api import auth, chat, tasks, proficiency, progress, content
 
@@ -28,7 +29,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=get_config().get("server", {}).get("cors_origins", ["http://localhost:3000"]),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
