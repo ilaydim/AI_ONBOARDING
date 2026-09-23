@@ -10,11 +10,11 @@ from app.api.deps import area_ready
 from app.content.task_parser import parse_tasks, is_covered_by_verified_note, verified_keys
 from app.content.progress_store import (
     get_task_progress, save_task_progress, mark_task_completed,
-    mark_task_skipped, resume_task, get_completion_stats,
+    mark_task_skipped, resume_task, get_gaps,
 )
 from app.content.loader import load_area_content
 from app.llm.factory import get_llm_adapter
-from app.core.logger import log_task_event, log_llm_call
+from app.core.logger import log_task_event, log_llm_call, describe_error
 from app.core.sanitize import sanitize_user_input
 from app.llm.prompt_builder import get_evaluation_prompt
 import json, re
@@ -47,6 +47,32 @@ def _order_by_dependencies(tasks: list[Task]) -> list[Task]:
     return ordered
 
 
+def personalized_path(area: str, language: str, level: str, notes: list[dict]) -> list[Task]:
+    """Çalışanın seviyesine, doğrulanmış profil notlarına ve bağımlılıklara göre sıralı görev listesi."""
+    tasks = _filter_tasks_for_level(parse_tasks(area, language), level)
+    return _order_by_dependencies(_apply_profile_notes(tasks, notes, level))
+
+
+def path_stats(tasks: list[Task], progress: dict) -> dict:
+    """
+    FR-4.2 / FR-3.17: toplam, tamamlanan, atlanan, kalan görev ve yüzde — kişiselleştirilmiş yol üzerinden.
+    Tüm ilerleme uçları (çalışan, yönetici, oturum özeti) bu tek hesaplamayı kullanır.
+    """
+    def status(t):
+        tp = progress.get(t.id)
+        return tp.status if tp else TaskStatus.pending
+    completed = sum(1 for t in tasks if status(t) == TaskStatus.completed)
+    skipped = sum(1 for t in tasks if status(t) == TaskStatus.skipped)
+    total = len(tasks)
+    return {
+        "total": total,
+        "completed": completed,
+        "skipped": skipped,
+        "pending": total - completed - skipped,
+        "completion_percentage": round(completed / total * 100, 1) if total else 0,
+    }
+
+
 def _locked_ids(ordered: list[Task], progress: dict) -> set[str]:
     """
     FR-3.11: önceki görev tamamlanmadan / atlanmadan sıradaki göreve geçilemez.
@@ -76,15 +102,10 @@ def _apply_profile_notes(tasks: list[Task], notes: list, level: str) -> list[Tas
 
 @router.get("/learning-path")
 def get_learning_path(current_user: UserProfile = Depends(area_ready)):
-    all_tasks = parse_tasks(current_user.area, current_user.language)
-    level_tasks = _filter_tasks_for_level(all_tasks, current_user.experience_level)
-    filtered = _apply_profile_notes(
-        level_tasks,
+    filtered = personalized_path(
+        current_user.area, current_user.language, current_user.experience_level,
         [n.model_dump() for n in current_user.notes],
-        current_user.experience_level,
     )
-
-    filtered = _order_by_dependencies(filtered)
     progress = get_task_progress(current_user.id)
     locked = _locked_ids(filtered, progress)
     result = []
@@ -110,11 +131,10 @@ def complete_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    path = _order_by_dependencies(_apply_profile_notes(
-        _filter_tasks_for_level(all_tasks, current_user.experience_level),
+    path = personalized_path(
+        current_user.area, current_user.language, current_user.experience_level,
         [n.model_dump() for n in current_user.notes],
-        current_user.experience_level,
-    ))
+    )
     if task.id in _locked_ids(path, get_task_progress(current_user.id)):
         raise HTTPException(
             status_code=409,
@@ -142,7 +162,7 @@ def complete_task(
         else:
             result_data = {"passed": False, "feedback": raw}
     except Exception as e:
-        log_llm_call(current_user.id, elapsed_ms=0, success=False, error=type(e).__name__)
+        log_llm_call(current_user.id, elapsed_ms=0, success=False, error=describe_error(e))
         raise HTTPException(status_code=503, detail="Değerlendirme şu an yapılamıyor. Lütfen tekrar dene.")
 
     passed = result_data.get("passed", False)
@@ -209,4 +229,8 @@ def resume_skipped_task(task_id: str, current_user: UserProfile = Depends(get_cu
 
 @router.get("/stats")
 def get_stats(current_user: UserProfile = Depends(get_current_user)):
-    return get_completion_stats(current_user.id)
+    path = personalized_path(
+        current_user.area, current_user.language, current_user.experience_level,
+        [n.model_dump() for n in current_user.notes],
+    )
+    return {**path_stats(path, get_task_progress(current_user.id)), "gaps": get_gaps(current_user.id)}

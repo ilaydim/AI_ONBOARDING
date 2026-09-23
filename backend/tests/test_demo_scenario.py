@@ -96,7 +96,11 @@ def test_phase1_demo_scenario(demo):
 
     # 11. İlerleme ekranında tamamlanan görev ve yüzde güncellenir
     stats = client.get("/tasks/stats", headers=h).json()
-    assert stats["completed"] == 1 and stats["completion_percentage"] > 0
+    assert stats["completed"] == 1 and stats["total"] == len(path)
+    assert stats["completion_percentage"] == round(100 / len(path), 1)
+    me = client.get("/progress/me", headers=h).json()
+    assert {k: me[k] for k in ("total", "completed", "completion_percentage")} == \
+           {k: stats[k] for k in ("total", "completed", "completion_percentage")}
 
     # 12. Oturum özeti LLM tarafından üretilir
     mock.reply = "Bugün mimariyi öğrendin."
