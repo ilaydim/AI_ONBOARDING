@@ -156,3 +156,24 @@ def test_idle_time_is_capped(tmp_path, monkeypatch):
     ps._save("u9", data)
     assert ps.touch_task_activity("u9", "t") == ps.MAX_IDLE_MINUTES
 
+
+def test_out_of_scope_related_question_logged_as_gap(env):
+    client, mock = env
+    mock.reply = "Docker is ... This information comes from my general technical knowledge, not company documents."
+    client.post("/chat", json={"message": "What is Docker?"})
+    client.post("/chat", json={"message": "What is Docker?"})
+    gaps = [g for g in ps.get_gaps("u1") if g.signal == "out_of_scope"]
+    assert len(gaps) == 1 and gaps[0].topic == "What is Docker?" and gaps[0].count == 2
+
+
+def test_in_scope_answer_not_logged(env):
+    client, mock = env
+    mock.reply = "Our CI/CD pipeline uses ..."
+    client.post("/chat", json={"message": "How does CI/CD work?"})
+    assert ps.get_gaps("u1") == []
+
+
+def test_markers_present_in_system_prompts():
+    from app.llm import prompt_builder as pb
+    assert pb.OUT_OF_SCOPE_MARKERS[0] in pb.SYSTEM_PROMPT_TR
+    assert pb.OUT_OF_SCOPE_MARKERS[1] in pb.SYSTEM_PROMPT_EN

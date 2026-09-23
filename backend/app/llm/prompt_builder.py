@@ -5,6 +5,18 @@
 3. Konuşma geçmişi (session'dan)
 """
 
+# FR-4.8: sistem promptu, md kapsamı dışında ama alanla ilgili sorularda yanıta bu cümleyi ekletir.
+# Yanıtta bu cümle görülürse soru "içerik boşluğu" olarak loglanır. Şablonlarla senkron tutulmalı (test var).
+OUT_OF_SCOPE_MARKERS = (
+    "Bu bilgi şirket dökümanlarından değil, genel teknik bilgimden geliyor.",
+    "This information comes from my general technical knowledge, not company documents.",
+)
+
+
+def is_out_of_scope_reply(reply: str) -> bool:
+    return any(m in reply for m in OUT_OF_SCOPE_MARKERS)
+
+
 SYSTEM_PROMPT_TR = """Sen bir şirket onboarding asistanısın. Görevin yeni çalışanlara şirketi ve atandıkları alanı öğretmektir.
 
 Çalışan Profili:

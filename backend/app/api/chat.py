@@ -11,7 +11,7 @@ from app.content.progress_store import increment_question_count, record_gap, get
 from app.content.task_parser import parse_tasks
 from app.core.settings import get_config
 from app.llm.factory import get_llm_adapter
-from app.llm.prompt_builder import build_system_prompt
+from app.llm.prompt_builder import build_system_prompt, is_out_of_scope_reply
 from app.core.logger import log_llm_call
 from app.core.rate_limit import check_llm_rate_limit
 from app.core.sanitize import sanitize_user_input
@@ -71,6 +71,10 @@ def chat(
     except Exception as e:
         log_llm_call(uid, elapsed_ms=(time.time() - t0) * 1000, success=False, error=type(e).__name__)
         raise HTTPException(status_code=503, detail="LLM servisi şu an erişilemiyor. Lütfen biraz sonra tekrar dene.")
+
+    # FR-4.8: md'de karşılığı olmayan ama alanla ilgili soru → içerik boşluğu
+    if is_out_of_scope_reply(reply):
+        record_gap(uid, message[:120], "out_of_scope")
 
     # Geçmişi güncelle
     history.append({"role": "user", "content": message})

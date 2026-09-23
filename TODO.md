@@ -14,7 +14,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 | FR-1 Profil & giriş | ✅ |
 | FR-2 Şirket bilgi katmanı | ✅ |
 | FR-3 Görev bazlı öğrenme | ✅ |
-| FR-4 İlerleme & boşluk | 🟡 (kapsam dışı soru logu yok) |
+| FR-4 İlerleme & boşluk | ✅ |
 | LLM-1..3 Adapter/prompt/davranış | ✅ |
 | CM-1..4 İçerik yönetimi | ✅ |
 | NFR | 🟡 (HTTPS, performans ölçümü, kullanılabilirlik testi kaldı) |
@@ -71,6 +71,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 - [x] Kural tabanlı boşluk tespiti; aynı konuda eşik (5) aşılınca **bir kez** kayıt (FR-4.5)
 - [x] Süre bazlı boşluk: görevdeki aktif süre (mesajlar arası en fazla 5 dk sayılır) tahmini sürenin `time_multiplier` katını aşarsa boşluk (`time_exceeded`) bir kez kaydedilir ve sohbette proaktif yardım mesajı çıkar (FR-4.5, FR-4.6)
 - [x] Eşikler `config.yaml`'dan okunuyor (`question_threshold`, `time_multiplier`); koddaki sabit kaldırıldı
+- [x] Md kapsamı dışında ama alanla ilgili sorular (yanıtta "genel bilgimden geliyor" notu) `out_of_scope` boşluğu olarak kaydedilir, tekrar sayılır; admin raporunda görünür (FR-4.8)
 - [x] Başarısız yeterlilik testi boşluk olarak kaydedilir (FR-4.7)
 - [x] Yönetici raporu: ilerleme, boşluklar, bekleyen görev sayısı (FR-4.9–4.11)
 
@@ -79,7 +80,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 - [x] Atomik JSON yazma (tmp + fsync + `os.replace`) ve bozuk dosyada `.corrupt` yedekleyip devam etme (NFR-5.2)
 - [x] Konuşma geçmişi sınırı aşınca eski mesajlar LLM ile özetlenir, özet başarısızsa atılır (LLM-2.4; `llm/history.py`)
 - [x] LLM hatalarında kullanıcıya genel mesaj, ayrıntı yalnızca logda ve yalnızca hata sınıf adı (NFR-3.3, NFR-7.4)
-- [x] `MockAdapter` + 31 pytest testi: chunking, task parser, sanitize, geçmiş kısaltma, progress store, API akışları (NFR-6.1–6.3; `cd backend && pytest`)
+- [x] `MockAdapter` + 34 pytest testi: chunking, task parser, sanitize, geçmiş kısaltma, progress store, API akışları (NFR-6.1–6.3; `cd backend && pytest`)
 - [x] Rate limiting: kullanıcı başına 15 çağrı/dk (NFR-2.9)
 - [x] Oturum 30 dk hareketsizlikte kapanır (`useInactivityLogout`) (NFR-2.8)
 - [x] Admin endpoint'leri `require_admin` ile korunuyor (NFR-2.5)
@@ -96,7 +97,6 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 
 ### Orta öncelik
 
-- [ ] **FR-4.8 Kapsam dışı ama alakalı soruların loglanması** — `chat.py`'de karşılığı yok
 - [ ] **CM-1.5 Eksik md dosyası** — `load_markdown` eksik dosyada sessizce `""` döndürüyor; anlaşılır hata / uyarı ver, ilgili alanı devre dışı bırak (NFR-5.3)
 - [ ] **NFR-3.5** Yanıt beklerken yükleniyor göstergesi (streaming kullanılmıyorsa spinner)
 - [ ] **NFR-1.x** Performans: ilk token ≤ 3 sn, tam yanıt ≤ 10 sn ölç
