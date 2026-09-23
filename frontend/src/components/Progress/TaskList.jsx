@@ -56,7 +56,6 @@ export default function TaskList({ onSelectTask, selectedTaskId }) {
   if (loading) return <p style={{ padding: 16, color: "#666" }}>{t("tasks.loading")}</p>;
   if (error) return <p style={{ padding: 16, color: "red" }}>{error}</p>;
 
-  const activeIdx = path.findIndex(({ status }) => status !== "completed" && status !== "skipped");
   const completed = path.filter(({ status }) => status === "completed").length;
   const skipped = path.filter(({ status }) => status === "skipped").length;
   const pending = path.filter(({ status }) => status === "pending").length;
@@ -79,8 +78,7 @@ export default function TaskList({ onSelectTask, selectedTaskId }) {
         <span>⏭ {skipped} {t("tasks.status.skipped").replace("⏭ ", "")}</span>
         <span>⏳ {pending} {t("tasks.status.pending")}</span>
       </div>
-      {path.map(({ task, status }, idx) => {
-        const locked = status === "pending" && idx > activeIdx && activeIdx !== -1;
+      {path.map(({ task, status, locked }, idx) => {
         return (
           <div
             key={task.id}

@@ -13,7 +13,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 |---|---|
 | FR-1 Profil & giriş | ✅ |
 | FR-2 Şirket bilgi katmanı | ✅ |
-| FR-3 Görev bazlı öğrenme | 🟡 (bağımlılık sırası/kilidi backend'de yok) |
+| FR-3 Görev bazlı öğrenme | ✅ |
 | FR-4 İlerleme & boşluk | 🟡 (süre bazlı boşluk ve kapsam dışı log yok) |
 | LLM-1..3 Adapter/prompt/davranış | ✅ |
 | CM-1..4 İçerik yönetimi | ✅ |
@@ -56,6 +56,8 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 ### Görev bazlı öğrenme (FR-3)
 - [x] Seviye + profil notuna göre öğrenme yolu (`GET /tasks/learning-path`) (FR-3.1–3.3)
 - [x] Bağımlı görevler `skippable` bayrağıyla atlanamıyor, açık hata mesajı dönüyor (FR-3.14, FR-3.15; `POST /tasks/{id}/skip`)
+- [x] Öğrenme yolu bağımlılıklara göre topolojik sıralanır; elenmiş bağımlılıklar karşılanmış sayılır, döngüde çökmez (FR-3.4; `_order_by_dependencies`)
+- [x] Önceki görev bitmeden sıradaki kilitli: API `locked` döner, `complete` 409 verir, frontend backend'in `locked` alanını kullanır (FR-3.11)
 - [x] Tamamlama + LLM değerlendirmesi (`POST /tasks/complete`) (FR-3.8–3.10)
 - [x] Atlama / geri dönme (`/skip`, `/resume`) (FR-3.12, FR-3.13)
 - [x] Görev 2 kez başarısız olunca yardım/ek açıklama önerisi — frontend'de (`ChatScreen.jsx`) (FR-3.18; commit mesajında "FR-3.11" yazıyor, bkz. §4)
@@ -75,7 +77,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 - [x] Atomik JSON yazma (tmp + fsync + `os.replace`) ve bozuk dosyada `.corrupt` yedekleyip devam etme (NFR-5.2)
 - [x] Konuşma geçmişi sınırı aşınca eski mesajlar LLM ile özetlenir, özet başarısızsa atılır (LLM-2.4; `llm/history.py`)
 - [x] LLM hatalarında kullanıcıya genel mesaj, ayrıntı yalnızca logda ve yalnızca hata sınıf adı (NFR-3.3, NFR-7.4)
-- [x] `MockAdapter` + 22 pytest testi: chunking, task parser, sanitize, geçmiş kısaltma, progress store, API akışları (NFR-6.1–6.3; `cd backend && pytest`)
+- [x] `MockAdapter` + 27 pytest testi: chunking, task parser, sanitize, geçmiş kısaltma, progress store, API akışları (NFR-6.1–6.3; `cd backend && pytest`)
 - [x] Rate limiting: kullanıcı başına 15 çağrı/dk (NFR-2.9)
 - [x] Oturum 30 dk hareketsizlikte kapanır (`useInactivityLogout`) (NFR-2.8)
 - [x] Admin endpoint'leri `require_admin` ile korunuyor (NFR-2.5)
@@ -92,8 +94,6 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 
 ### Orta öncelik
 
-- [ ] **FR-3.4 Bağımlılık sıralaması** — `task_parser` `dependency` alanını okuyor ama `learning-path` ve `complete` bunu kullanmıyor; sıra yalnızca md dosyasındaki sıraya bağlı
-- [ ] **FR-3.11 Sıradaki göreve geçiş kilidi** — backend'de zorlanmıyor (`complete` sadece bir sonraki görev id'sini döndürüyor). Bağımlılığı tamamlanmamış göreve geçişi engelle
 - [ ] **FR-4.5 / 4.6 Süre bazlı boşluk** — `config.yaml`'daki `time_multiplier` hiçbir yerde kullanılmıyor; tahmini sürenin 2 katı aşılınca boşluk sinyali ve proaktif yardım yok. Şu an yalnızca soru sayısı var (`gap_warning`)
 - [ ] **FR-4.8 Kapsam dışı ama alakalı soruların loglanması** — `chat.py`'de karşılığı yok
 - [ ] **CM-1.5 Eksik md dosyası** — `load_markdown` eksik dosyada sessizce `""` döndürüyor; anlaşılır hata / uyarı ver, ilgili alanı devre dışı bırak (NFR-5.3)
@@ -115,7 +115,7 @@ Gösterim: ✅ yapıldı · 🟡 kısmen · ⬜ yapılmadı
 
 ## 4. Notlar / Tutarsızlıklar
 
-- FR-3.11 numarası: commit mesajı "FR-3.11 help after 2nd fail" diyor ama bu davranış SRS'te FR-3.18. SRS'in FR-3.11'i "sıradaki göreve geçemez" kuralıdır (yukarıda yapılacak).
+- FR-3.11 numarası: commit mesajı "FR-3.11 help after 2nd fail" diyor ama bu davranış SRS'te FR-3.18. SRS'in FR-3.11'i "sıradaki göreve geçemez" kuralıdır (artık backend'de de uygulanıyor).
 - SRS'te FR-3.13–3.15 numaraları hem Faz 1 tablosunda hem Faz 2 "Ek Gereksinimler"de tekrar ediyor (belge hatası).
 - Bu dosyadaki ilk sürümde FR-1.2, FR-2.5, FR-3.15, FR-3.16, NFR-2.4 "doğrula" olarak listelenmişti; kod incelenip yapıldı olarak taşındı.
 - SRS'te LLM sağlayıcısı Claude; koddaki varsayılan `config.yaml` şu an **Groq / llama-3.3-70b**. Adapter sayesinde uygunluk sorunu yok, ama demo öncesi karar verilmeli.

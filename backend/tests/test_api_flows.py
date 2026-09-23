@@ -74,3 +74,47 @@ def test_proficiency_fail_records_gap(env):
     r = client.post("/proficiency/submit", json={"note_key": "Docker", "answers": [1, 1, 1, 1], "questions": qs})
     assert r.json()["passed"] is False
     assert ps.get_gaps("u1")[0].topic == "Docker"
+
+
+def test_only_first_task_unlocked(env):
+    client, _ = env
+    path = client.get("/tasks/learning-path").json()
+    assert [p["locked"] for p in path] == [False] + [True] * (len(path) - 1)
+
+
+def test_complete_locked_task_rejected(env):
+    client, mock = env
+    mock.reply = '{"passed": true, "feedback": "ok"}'
+    second = client.get("/tasks/learning-path").json()[1]["task"]["id"]
+    r = client.post("/tasks/complete", json={"task_id": second, "user_output": "x"})
+    assert r.status_code == 409
+    assert not mock.calls  # LLM'e hiç gitmemeli
+
+
+def test_next_task_unlocks_after_completion(env):
+    client, mock = env
+    mock.reply = '{"passed": true, "feedback": "ok"}'
+    path = client.get("/tasks/learning-path").json()
+    first, second = path[0]["task"]["id"], path[1]["task"]["id"]
+    r = client.post("/tasks/complete", json={"task_id": first, "user_output": "x"}).json()
+    assert r["next_task_id"] == second
+    assert client.get("/tasks/learning-path").json()[1]["locked"] is False
+
+
+def test_order_by_dependencies_moves_dependent_after_prerequisite():
+    from app.api.tasks import _order_by_dependencies
+    from app.models.task import Task
+
+    def mk(i, dep=None):
+        return Task(id=i, title=i, levels=["junior"], dependency=dep, expected_output="", completion_criteria="", estimated_hours=1)
+
+    out = _order_by_dependencies([mk("b", "a"), mk("a"), mk("c", "zzz")])
+    assert [t.id for t in out] == ["a", "b", "c"] or [t.id for t in out] == ["a", "c", "b"]
+    assert out.index(next(t for t in out if t.id == "a")) < out.index(next(t for t in out if t.id == "b"))
+
+
+def test_order_handles_cycles():
+    from app.api.tasks import _order_by_dependencies
+    from app.models.task import Task
+    mk = lambda i, d: Task(id=i, title=i, levels=[], dependency=d, expected_output="", completion_criteria="", estimated_hours=1)
+    assert len(_order_by_dependencies([mk("a", "b"), mk("b", "a")])) == 2

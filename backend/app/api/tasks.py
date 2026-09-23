@@ -25,6 +25,45 @@ def _filter_tasks_for_level(tasks: list[Task], level: str) -> list[Task]:
     return [t for t in tasks if level in t.levels]
 
 
+def _order_by_dependencies(tasks: list[Task]) -> list[Task]:
+    """
+    FR-3.4: bağımlılığı olan görev, bağımlı olduğu görevden önce gelemez.
+    Stabil topolojik sıralama; yolda olmayan (seviye/profil nedeniyle elenmiş)
+    bağımlılıklar karşılanmış sayılır. Döngü varsa kalan görevler dosya sırasıyla eklenir.
+    """
+    ids = {t.id for t in tasks}
+    placed: set[str] = set()
+    ordered: list[Task] = []
+    remaining = list(tasks)
+    while remaining:
+        nxt = next((t for t in remaining if not t.dependency or t.dependency not in ids or t.dependency in placed), None)
+        if nxt is None:
+            ordered.extend(remaining)
+            break
+        ordered.append(nxt)
+        placed.add(nxt.id)
+        remaining.remove(nxt)
+    return ordered
+
+
+def _locked_ids(ordered: list[Task], progress: dict) -> set[str]:
+    """
+    FR-3.11: önceki görev tamamlanmadan / atlanmadan sıradaki göreve geçilemez.
+    İlk bitmemiş görevden sonraki tüm bekleyen görevler kilitlidir.
+    """
+    locked: set[str] = set()
+    blocked = False
+    for t in ordered:
+        tp = progress.get(t.id)
+        status = tp.status if tp else TaskStatus.pending
+        if status in (TaskStatus.completed, TaskStatus.skipped):
+            continue
+        if blocked:
+            locked.add(t.id)
+        blocked = True
+    return locked
+
+
 def _apply_profile_notes(tasks: list[Task], notes: list, level: str) -> list[Task]:
     """
     Profil notlarına göre bazı görevleri atla.
@@ -55,13 +94,16 @@ def get_learning_path(current_user: UserProfile = Depends(get_current_user)):
         current_user.experience_level,
     )
 
+    filtered = _order_by_dependencies(filtered)
     progress = get_task_progress(current_user.id)
+    locked = _locked_ids(filtered, progress)
     result = []
     for task in filtered:
         tp = progress.get(task.id)
         result.append({
             "task": task.model_dump(),
             "status": tp.status if tp else TaskStatus.pending,
+            "locked": task.id in locked,
             "question_count": tp.question_count if tp else 0,
             "elapsed_minutes": tp.elapsed_minutes if tp else 0,
         })
@@ -77,6 +119,17 @@ def complete_task(
     task = next((t for t in all_tasks if t.id == req.task_id), None)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    path = _order_by_dependencies(_apply_profile_notes(
+        _filter_tasks_for_level(all_tasks, current_user.experience_level),
+        [n.model_dump() for n in current_user.notes],
+        current_user.experience_level,
+    ))
+    if task.id in _locked_ids(path, get_task_progress(current_user.id)):
+        raise HTTPException(
+            status_code=409,
+            detail="Complete or skip the previous tasks before starting this one.",
+        )
 
     area_content = load_area_content(current_user.area, current_user.language)
     eval_prompt = get_evaluation_prompt(current_user.language).format(
@@ -110,12 +163,12 @@ def complete_task(
     log_task_event(current_user.id, req.task_id, "task_complete", passed=passed)
 
     # Sıradaki görevi bul
-    level_tasks = _filter_tasks_for_level(all_tasks, current_user.experience_level)
     progress = get_task_progress(current_user.id)
     next_task = None
     found_current = False
-    for t in level_tasks:
-        if found_current and progress.get(t.id) is None:
+    for t in path:
+        tp = progress.get(t.id)
+        if found_current and (tp is None or tp.status == TaskStatus.pending):
             next_task = t.id
             break
         if t.id == req.task_id:
